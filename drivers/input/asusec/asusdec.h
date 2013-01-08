@@ -13,6 +13,7 @@
 #define DOCK_SPEAKER			0	// 0: not ready, 1: ready
 #define DOCK_USB			1	// 0: not ready, 1: ready
 #define BATTERY_DRIVER			1	// 0: not ready, 1: ready
+#define AUDIO_DOCK_STAND		1	// 0: not ready, 1: ready
 /*
  * Debug Utility
  */
@@ -184,6 +185,7 @@
 #define ASUSDEC_SMI_RESET			0x5F
 #define ASUSDEC_SMI_ADAPTER_EVENT	0x60
 #define ASUSDEC_SMI_BACKLIGHT_ON	0x63
+#define ASUSDEC_SMI_AUDIO_DOCK_IN	0x70
 /*************IO control setting***************/
 #define ASUSDEC_IOCTL_HEAVY	2
 #define ASUSDEC_IOCTL_NORMAL	1
@@ -204,6 +206,26 @@
 #define ASUSDEC_EC_WAKEUP		_IOR(ASUSDEC_IOC_MAGIC,	6,	int)
 #define ASUSDEC_FW_DUMMY		_IOR(ASUSDEC_IOC_MAGIC, 7,	int)
 /*************IO control setting***************/
+
+/************* Dock Defifition ***********/
+#define DOCK_UNKNOWN		0
+#define MOBILE_DOCK		1
+#define AUDIO_DOCK		2
+#define AUDIO_STAND		3
+
+/************* Dock State ***********/
+#define DOCK_OUT		0
+#define DOCK_IN		1
+
+/************* Cable Type ***********/
+#define BAT_CABLE_OUT		0
+#define BAT_CABLE_USB		1
+#define BAT_CABLE_AC		3
+#define BAT_CABLE_UNKNOWN		-1
+#define CABLE_0V		0x00
+#define CABLE_5V		0x05
+#define CABLE_12V		0x12
+#define CABLE_15V		0x15
 
 /************* EC FW update ***********/
 #define EC_BUFF_LEN  256
@@ -272,6 +294,8 @@ struct asusdec_chip {
 	struct delayed_work asusdec_led_on_work;
 	struct delayed_work asusdec_led_off_work;
 	struct delayed_work asusdec_hall_sensor_work;
+	struct delayed_work asusdec_audio_work;
+	struct delayed_work audio_in_out_work;
 #if DOCK_SPEAKER
 	struct delayed_work asusdec_audio_report_work;
 #endif
@@ -288,6 +312,8 @@ struct asusdec_chip {
 	u8 ec_data[32];
 	u8 i2c_data[32];
 	u8 i2c_dm_data[32];
+	u8 mcu_fw_version[5];
+	u8 mcu_type;
 	int bc;			// byte counter
 	int index;		// for message
 	int status;
@@ -314,6 +340,7 @@ struct asusdec_chip {
 	int dock_behavior;	// 0: susb_on follows wakeup event, 1: susb_on follows ec_req
 	int ec_in_s3;		// 0: normal mode, 1: ec in deep sleep mode
 	int susb_on;	// 0: susb off, 1: susb on
+	int dock_type; //0: unknown, 1: mobile_dock, 2: audio_dock, 3: audio_stand
 };
 
 #endif

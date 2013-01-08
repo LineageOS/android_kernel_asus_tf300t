@@ -1613,6 +1613,18 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 {
 	unsigned i;
 
+	// ensure prepoweroff called after backlight set to 0
+	if ( dc->ndev->id==0 && dc->out->sd_settings && dc->out->sd_settings->bl_device && tegra3_get_project_id() != TEGRA3_PROJECT_TF700T) {
+		struct platform_device *pdev = dc->out->sd_settings->bl_device;
+		struct backlight_device *bl = platform_get_drvdata(pdev);
+		int count = 0;
+		while(bl->props.brightness!=0 && count<4)
+		{
+			count++;
+			msleep(50);
+		}
+	}
+
 	if (dc->out && dc->out->prepoweroff)
 		dc->out->prepoweroff();
 
@@ -2111,13 +2123,12 @@ static void tegra_dc_shutdown(struct nvhost_device *ndev)
 
                        if (pb->notify)
                                brightness = pb->notify(pb->dev, brightness);
-                       msleep(5);
+                       msleep(10);
                        pwm_config(pb->pwm, 0, pb->period);
                        pwm_disable(pb->pwm);
                }
 
-               if (dc->out && dc->out->disable)
-                       dc->out->disable();
+		tegra_dc_disable(dc);
        }
        printk("%s-, ndev->name=%s ####\n", __func__, ndev->name);
 }

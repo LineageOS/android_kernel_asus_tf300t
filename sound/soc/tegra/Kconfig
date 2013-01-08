@@ -70,6 +70,7 @@ config SND_SOC_TEGRA_RT5631
 	select SND_SOC_RT5631
 	select SND_SOC_SPDIF
 	select SND_SOC_TEGRA30_DAM if ARCH_TEGRA_3x_SOC
+	select AUDIO_DOCK
 	help
 	  Say Y or M here if you want to add support for SoC audio on Tegra
 	  boards using the RT5631 codec. Currently, the supported boards are
@@ -92,6 +93,7 @@ config SND_SOC_TEGRA_WM8903
 	select SND_SOC_WM8903
 	select SND_SOC_SPDIF
 	select SND_SOC_TEGRA30_DAM if ARCH_TEGRA_3x_SOC
+	select AUDIO_DOCK
 	help
 	  Say Y or M here if you want to add support for SoC audio on Tegra
 	  boards using the WM8093 codec. Currently, the supported boards are
@@ -251,6 +253,7 @@ config SND_SOC_TEGRA_RT5642
         select SND_SOC_RT5642
         select SND_SOC_SPDIF
         select SND_SOC_TEGRA30_DAM if ARCH_TEGRA_3x_SOC
+	select AUDIO_DOCK
         help
           Say Y or M here if you want to add support for SoC audio on Tegra
           boards using the RT5642 codec.
@@ -276,3 +279,10 @@ config SND_SOC_TEGRA_MAX98095
 	  Say Y or M here if you want to add support for SoC audio on Tegra
 	  boards using the MAX98095 codec. Currently, only supported board is
 	  Cardhu.
+
+config AUDIO_DOCK
+        bool
+        default n
+        help
+          Say Y or N here if you want to add support for accessory audio dock.
+
