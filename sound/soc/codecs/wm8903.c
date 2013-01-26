@@ -45,9 +45,6 @@ static struct attribute_group attrs;
 struct snd_soc_codec *wm8903_codec;
 EXPORT_SYMBOL(wm8903_codec);
 
-extern int asusAudiodec_i2c_write_data(char *data, int length);
-extern int asusAudiodec_i2c_read_data(char *data, int length);
-
 /* Register defaults at reset */
 static u16 wm8903_reg_defaults[] = {
 	0x8903,     /* R0   - SW Reset and ID */
@@ -288,9 +285,6 @@ static ssize_t wm8903_no_force_headphone(struct device *dev,
 
 
 static DEVICE_ATTR(no_force_headphone, S_IRUGO, wm8903_no_force_headphone, NULL);
-
-
-
 static ssize_t read_audio_codec_status(struct device *dev, struct device_attribute *devattr, char *buf)
 {
 	return sprintf(buf, "%d\n",codec_wm8903_status);
@@ -652,27 +646,6 @@ static int wm8903_dcs_event(struct snd_soc_dapm_widget *w,
 	}
 
 	return 0;
-}
-
-
-static int wm8903_lineout_event(struct snd_soc_dapm_widget *w,
-                            struct snd_kcontrol *kcontrol, int event)
-{
-        struct snd_soc_codec *codec = w->codec;
-        struct wm8903_priv *wm8903 = snd_soc_codec_get_drvdata(codec);
-	char mute_all_audioDock[2] = {0xFF, 0x01};
-        char unmute_all_audioDock[2] = {0x00, 0x01};
-
-        switch (event) {
-        case SND_SOC_DAPM_POST_PMU:
-		asusAudiodec_i2c_write_data(unmute_all_audioDock, 2);
-                break;
-        case SND_SOC_DAPM_PRE_PMD:
-		asusAudiodec_i2c_write_data(mute_all_audioDock, 2);
-                break;
-        }
-
-        return 0;
 }
 
 #define WM8903_DCS_MODE_WRITE_STOP 0
@@ -1357,16 +1330,16 @@ SND_SOC_DAPM_PGA_S("HPR_ENA", 1, WM8903_ANALOGUE_HP_0, 0, 0, NULL, 0),
 
 SND_SOC_DAPM_PGA_S("LINEOUTL_RMV_SHORT", 4, WM8903_ANALOGUE_LINEOUT_0, 7, 0,
 		   NULL, 0),
-SND_SOC_DAPM_PGA_S("LINEOUTL_ENA_OUTP", 3, WM8903_ANALOGUE_LINEOUT_0, 6, 0,wm8903_lineout_event,
-                   SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+SND_SOC_DAPM_PGA_S("LINEOUTL_ENA_OUTP", 3, WM8903_ANALOGUE_LINEOUT_0, 6, 0,
+		   NULL, 0),
 SND_SOC_DAPM_PGA_S("LINEOUTL_ENA_DLY", 2, WM8903_ANALOGUE_LINEOUT_0, 5, 0,
 		   NULL, 0),
 SND_SOC_DAPM_PGA_S("LINEOUTL_ENA", 1, WM8903_ANALOGUE_LINEOUT_0, 4, 0,
 		   NULL, 0),
 SND_SOC_DAPM_PGA_S("LINEOUTR_RMV_SHORT", 4, WM8903_ANALOGUE_LINEOUT_0, 3, 0,
 		   NULL, 0),
-SND_SOC_DAPM_PGA_S("LINEOUTR_ENA_OUTP", 3, WM8903_ANALOGUE_LINEOUT_0, 2, 0,wm8903_lineout_event,
-                   SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD),
+SND_SOC_DAPM_PGA_S("LINEOUTR_ENA_OUTP", 3, WM8903_ANALOGUE_LINEOUT_0, 2, 0,
+		   NULL, 0),
 SND_SOC_DAPM_PGA_S("LINEOUTR_ENA_DLY", 2, WM8903_ANALOGUE_LINEOUT_0, 1, 0,
 		   NULL, 0),
 SND_SOC_DAPM_PGA_S("LINEOUTR_ENA", 1, WM8903_ANALOGUE_LINEOUT_0, 0, 0,

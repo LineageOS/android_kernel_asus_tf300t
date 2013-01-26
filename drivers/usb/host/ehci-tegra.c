@@ -24,10 +24,6 @@
 #include <mach/iomap.h>
 #include <../tegra_usb_phy.h>
 
-#include <linux/gpio.h>
-#include <linux/workqueue.h>
-#include <../gpio-names.h>
-
 #if 0
 #define EHCI_DBG(stuff...)	pr_info("ehci-tegra: " stuff)
 #else
@@ -35,14 +31,8 @@
 #endif
 
 static const char driver_name[] = "tegra-ehci";
-static struct usb_hcd *usb3_ehci_handle;
-static struct delayed_work usb3_ehci_dock_in_work;
-static unsigned  int gpio_dock_in_irq = 0;
-static int usb3_init = 0;
 
 #define TEGRA_USB_DMA_ALIGN 32
-
-static struct platform_device *dock_port_device;
 
 struct tegra_ehci_hcd {
 	struct ehci_hcd *ehci;
@@ -56,97 +46,11 @@ struct tegra_ehci_hcd {
 	bool bus_suspended_fail;
 };
 
-void tegra_usb3_smi_backlight_on_callback(void)
-{
-	int dock_in = 0;
-
-	if(usb3_init == 1) {
-		dock_in = !(gpio_get_value(TEGRA_GPIO_PU4));
-		if(dock_in == 1)
-			schedule_delayed_work(&usb3_ehci_dock_in_work,0.5*HZ);
-	}
-}
-EXPORT_SYMBOL(tegra_usb3_smi_backlight_on_callback);
-
-static void usb3_ehci_dock_in_work_handler(struct work_struct *w)
-{
-	printk(KERN_INFO "%s +\n", __func__);
-	usb_hcd_resume_root_hub(usb3_ehci_handle);
-	msleep(100);
-	printk(KERN_INFO "%s -\n", __func__);
-}
-
-static irqreturn_t gpio_dock_in_irq_handler(struct usb_hcd *hcd)
-{
-	int dock_in = 0;
-
-	printk(KERN_INFO "%s +\n", __func__);
-	dock_in  = !(gpio_get_value(TEGRA_GPIO_PU4));
-	if (usb3_ehci_handle != NULL && dock_in == 1)
-		schedule_delayed_work(&usb3_ehci_dock_in_work, 0.5*HZ);
-	printk(KERN_INFO "%s dock_in %d -\n", __func__, dock_in);
-	return IRQ_HANDLED;
-}
-
-static void gpio_dock_in_irq_init(struct usb_hcd *hcd)
-{
-	int ret = 0;
-
-	tegra_gpio_enable(TEGRA_GPIO_PU4);
-	ret = gpio_request(TEGRA_GPIO_PU4, "DOCK_IN");
-	if (ret < 0)
-		printk(KERN_ERR "DOCK_IN GPIO%d request fault!%d\n",TEGRA_GPIO_PU4, ret);
-
-	ret = gpio_direction_input(TEGRA_GPIO_PU4);
-	if (ret)
-		printk(KERN_ERR "gpio_direction_input failed for input TEGRA_GPIO_PU4=%d\n", TEGRA_GPIO_PU4);
-
-	gpio_dock_in_irq = gpio_to_irq(TEGRA_GPIO_PU4);
-	ret = request_irq(gpio_dock_in_irq, gpio_dock_in_irq_handler, IRQF_SHARED|IRQF_TRIGGER_RISING|IRQF_TRIGGER_FALLING, "usb3_dock_in_irq_handler", hcd);
-	if (ret < 0)
-		printk(KERN_ERR "%s: Could not request IRQ for the GPIO dock in, irq = %d, ret = %d\n", __func__, gpio_dock_in_irq, ret);
-
-	printk(KERN_INFO "%s: request irq = %d, ret = %d\n", __func__, gpio_dock_in_irq, ret);
-	INIT_DELAYED_WORK(&usb3_ehci_dock_in_work, usb3_ehci_dock_in_work_handler);
-}
-
-static ssize_t show_ehci_bus_suspend(struct device *dev, struct device_attribute *attr, char *buf)
-{
-	struct tegra_ehci_hcd *tegra = dev_get_drvdata(dev);
-	return sprintf(buf, "EHCI power_off_on_suspend= %d\n", tegra->phy->pdata->u_data.host.power_off_on_suspend);
-}
-
-static ssize_t store_ehci_bus_suspend(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
-{
-	struct tegra_ehci_hcd *tegra = dev_get_drvdata(dev);
-	struct usb_hcd *hcd = ehci_to_hcd(tegra->ehci);
-	int modify_bus_suspend;
-
-	if (sscanf(buf, "%d", &modify_bus_suspend) != 1)
-		return -EINVAL;
-
-	schedule_delayed_work(&usb3_ehci_dock_in_work, 0.5*HZ);
-	if (modify_bus_suspend == 0)
-		tegra->phy->pdata->u_data.host.power_off_on_suspend = 0;
-	else
-		tegra->phy->pdata->u_data.host.power_off_on_suspend = 1;
-
-	return count;
-}
-
-static DEVICE_ATTR(ehci_bus_suspend, S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP, show_ehci_bus_suspend, store_ehci_bus_suspend);
-
 struct dma_align_buffer {
 	void *kmalloc_ptr;
 	void *old_xfer_buffer;
 	u8 data[0];
 };
-
-struct platform_device *dock_port_device_info(void)
-{
-	return dock_port_device;
-}
-EXPORT_SYMBOL(dock_port_device_info);
 
 static void free_align_buffer(struct urb *urb)
 {
@@ -606,14 +510,6 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 	}
 #endif
 
-	if (tegra->phy->inst == 2) {
-		device_create_file(hcd->self.controller, &dev_attr_ehci_bus_suspend);
-		usb3_ehci_handle = hcd;
-		gpio_dock_in_irq_init(hcd);
-		usb3_init = 1;
-		dock_port_device = pdev;
-	}
-
 	printk(KERN_INFO "%s - #####\n", __func__);
 	return err;
 
@@ -674,10 +570,6 @@ static int tegra_ehci_remove(struct platform_device *pdev)
 	}
 #endif
 
-	if (tegra->phy->inst == 2) {
-		dock_port_device = NULL;
-	}
-
 	//if (tegra->irq)
 	//	disable_irq_wake(tegra->irq);
 	usb_remove_hcd(hcd);
@@ -695,14 +587,6 @@ static void tegra_ehci_hcd_shutdown(struct platform_device *pdev)
 	struct usb_hcd *hcd = ehci_to_hcd(tegra->ehci);
 
 	pr_info("%s instance %d +\n", __func__, tegra->phy->inst);
-
-	if (tegra->phy->inst == 2) {
-		device_remove_file(hcd->self.controller, &dev_attr_ehci_bus_suspend);
-		free_irq(gpio_dock_in_irq, hcd);
-		usb3_ehci_handle = NULL;
-		usb3_init = 0;
-		dock_port_device = NULL;
-	}
 
 	if (hcd->driver->shutdown)
 		hcd->driver->shutdown(hcd);

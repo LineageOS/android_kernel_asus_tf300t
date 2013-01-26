@@ -27,7 +27,7 @@ DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o   \
 	bcmsdh.o dhd_cdc.o bcmsdh_linux.o dhd_common.o linux_osl.o            \
 	bcmsdh_sdmmc.o dhd_custom_gpio.o sbutils.o wldev_common.o wl_android.o
 
-obj-$(CONFIG_BCMDHD) += bcmdhd_29.o
+obj-$(CONFIG_BCM4329) += bcmdhd_29.o
 bcmdhd_29-objs += $(DHDOFILES)
 ifneq ($(CONFIG_BCMDHD_WEXT),)
 bcmdhd_29-objs += wl_iw.o
@@ -38,6 +38,6 @@ bcmdhd_29-objs += wl_cfg80211.o wl_cfgp2p.o dhd_linux_mon.o
 DHDCFLAGS += -DWL_CFG80211
 endif
 EXTRA_CFLAGS = $(DHDCFLAGS)
-ifeq ($(CONFIG_BCMDHD),m)
+ifeq ($(CONFIG_BCM4329),m)
 EXTRA_LDFLAGS += --strip-debug
 endif

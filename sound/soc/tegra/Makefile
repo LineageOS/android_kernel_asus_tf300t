@@ -48,4 +48,3 @@ obj-$(CONFIG_SND_SOC_TEGRA_RT5640) += snd-soc-tegra-rt5640.o
 obj-$(CONFIG_SND_SOC_TEGRA_RT5642) += snd-soc-tegra-rt5642.o
 obj-$(CONFIG_SND_SOC_TEGRA_MAX98095) += snd-soc-tegra-max98095.o
 obj-$(CONFIG_SND_SOC_TEGRA_P1852) += snd-soc-tegra-p1852.o
-obj-$(CONFIG_AUDIO_DOCK) += audio_dock.o

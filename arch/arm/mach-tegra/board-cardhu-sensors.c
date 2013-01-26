@@ -171,30 +171,30 @@ static int cardhu_camera_init(void)
 	gpio_direction_output(CAMERA_CSI_MUX_SEL_GPIO, 0);
 	gpio_export(CAMERA_CSI_MUX_SEL_GPIO, false);
 #endif
-	pr_info("cardhu_camera_init");
-	if(tegra3_get_project_id() == TEGRA3_PROJECT_TF700T) {
-		gpio_request(TF700T_ISP_POWER_1V2_EN_GPIO, "isp_power_1v2_en");
-		gpio_request(TF700T_ISP_POWER_1V8_EN_GPIO, "isp_power_1v8_en");
-		gpio_request(ISP_POWER_RESET_GPIO, "isp_power_rstx");
-	}
-	else if(tegra3_get_project_id() == TEGRA3_PROJECT_TF201) {
-		gpio_request(ISP_POWER_1V2_EN_GPIO, "isp_power_1v2_en");
-		gpio_request(ISP_POWER_RESET_GPIO, "isp_power_rstx");
-		gpio_request(CAM3_POWER_DWN_GPIO, "cam3_power_dwn");
-		gpio_request(FRONT_YUV_SENSOR_RST_GPIO, "yuv_sensor_rst_lo");
-	}
-	else if(IsTF300() || tegra3_get_project_id() == TEGRA3_PROJECT_TF500T) {
-		gpio_request(ICATCH7002A_VDDIO_EN_GPIO, "cam_vddio_ldo_en");
-		gpio_request(ICATCH7002A_VDDA_EN_GPIO, "cam__vdda_ldo_en");
-		gpio_request(ICATCH7002A_VDDC_EN_GPIO, "cam_vddc_ldo_en");
-		if(tegra3_get_project_id() == TEGRA3_PROJECT_TF500T) {
-			gpio_request(ICATCH7002A_ISP_1V2_EN, "icatch_cam_vddio_ldo_en");
-		}
-		gpio_request(ICATCH7002A_AF_PWR_EN_GPIO, "cam_af_pwr_ldo_en");
-		gpio_request(ICATCH7002A_PWR_DN_GPIO, "cam_power_dwn");
-		gpio_request(ICATCH7002A_RST_GPIO, "cam_sensor_rst_lo");
-	}
-	return 0;
+    pr_info("cardhu_camera_init");
+    if(tegra3_get_project_id() == TEGRA3_PROJECT_TF700T){
+        gpio_request(TF700T_ISP_POWER_1V2_EN_GPIO, "isp_power_1v2_en");
+        gpio_request(TF700T_ISP_POWER_1V8_EN_GPIO, "isp_power_1v8_en");
+        gpio_request(ISP_POWER_RESET_GPIO, "isp_power_rstx");
+    }
+    else if(tegra3_get_project_id() == TEGRA3_PROJECT_TF201){
+        gpio_request(ISP_POWER_1V2_EN_GPIO, "isp_power_1v2_en");
+        gpio_request(ISP_POWER_RESET_GPIO, "isp_power_rstx");
+        gpio_request(CAM3_POWER_DWN_GPIO, "cam3_power_dwn");
+        gpio_request(FRONT_YUV_SENSOR_RST_GPIO, "yuv_sensor_rst_lo");
+    }
+    else if(IsTF300() || tegra3_get_project_id() == TEGRA3_PROJECT_TF500T){
+        gpio_request(ICATCH7002A_VDDIO_EN_GPIO, "cam_vddio_ldo_en");
+        gpio_request(ICATCH7002A_VDDA_EN_GPIO, "cam__vdda_ldo_en");
+        if(tegra3_get_project_id() == TEGRA3_PROJECT_TF500T){
+            gpio_request(ICATCH7002A_ISP_1V2_EN, "icatch_cam_vddio_ldo_en");
+            gpio_request(ICATCH7002A_VDDC_EN_GPIO, "cam_vddc_ldo_en");
+        }
+        gpio_request(ICATCH7002A_AF_PWR_EN_GPIO, "cam_af_pwr_ldo_en");
+        gpio_request(ICATCH7002A_PWR_DN_GPIO, "cam_power_dwn");
+        gpio_request(ICATCH7002A_RST_GPIO, "cam_sensor_rst_lo");
+    }
+    return 0;
 }
 
 #ifdef CONFIG_VIDEO_YUV
@@ -473,7 +473,7 @@ static int iCatch7002a_power_on(void)
     gpio_direction_output(ICATCH7002A_AF_PWR_EN_GPIO, 1);
     pr_info("gpio %d set to %d\n",ICATCH7002A_AF_PWR_EN_GPIO, gpio_get_value(ICATCH7002A_AF_PWR_EN_GPIO));
     //msleep(5);
-    if (IsTF300()) {
+    if (project_info!=TEGRA3_PROJECT_TF500T) {
         pr_info("gpio %d read as %d\n",ICATCH7002A_VDDC_EN_GPIO, gpio_get_value(ICATCH7002A_VDDC_EN_GPIO));
         gpio_direction_output(ICATCH7002A_VDDC_EN_GPIO, 1);
         pr_info("gpio %d set to %d\n",ICATCH7002A_VDDC_EN_GPIO, gpio_get_value(ICATCH7002A_VDDC_EN_GPIO));
@@ -531,7 +531,7 @@ static int iCatch7002a_power_off(void)
 
     tegra_pinmux_set_tristate(TEGRA_PINGROUP_CAM_MCLK, TEGRA_TRI_TRISTATE);
 
-    if (IsTF300()) {
+    if (project_info!=TEGRA3_PROJECT_TF500T) {
         gpio_set_value(ICATCH7002A_VDDC_EN_GPIO, 0);
         gpio_direction_output(ICATCH7002A_VDDC_EN_GPIO, 0);
     }

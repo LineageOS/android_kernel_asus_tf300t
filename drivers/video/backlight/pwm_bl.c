@@ -199,7 +199,7 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 			brightness = pb->notify(pb->dev, brightness);
 		if(bl_enable_sleep_control)
 		{
-			msleep(10);
+			msleep(5);
 			bl_enable_sleep_control = 0;
 		}
 		pwm_config(pb->pwm, 0, pb->period);

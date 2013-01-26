@@ -134,6 +134,3 @@ obj-$(CONFIG_VIRT_DRIVERS)	+= virt/
 
 # ASUS customized RIL drivers
 obj-$(CONFIG_RIL)			+= ril/
-
-# ASUS GPS dongle driver
-obj-$(CONFIG_ASUS_GPS)		+= asus_gps/

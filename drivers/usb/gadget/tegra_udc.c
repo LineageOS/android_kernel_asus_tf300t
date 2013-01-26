@@ -104,7 +104,6 @@ extern void touch_callback(unsigned cable_status);
 #endif
 #if DOCK_EC_ENABLED
 extern int asusdec_is_ac_over_10v_callback(void);
-extern int asusAudiodec_cable_type_callback(void);
 #endif
 #if GET_USB_CABLE_STATUS_ENABLED
 /* Export the function "unsigned int get_usb_cable_status(void)" for others to query the USB cable status. */
@@ -179,7 +178,6 @@ static void cable_detection_work_handler(struct work_struct *w)
 	int	dock_in = 1;
 	int	adapter_in = 0;
 	int	dock_ac = 0;
-	int	stand_ac = 0;
 	static int	ask_ec_num = 0;
 	unsigned int port_control_reg_offset;
 	struct tegra_udc *udc = the_udc;
@@ -260,17 +258,14 @@ static void cable_detection_work_handler(struct work_struct *w)
 			}else if(dock_in == 1) {// dock in
 				#if DOCK_EC_ENABLED
 				dock_ac = asusdec_is_ac_over_10v_callback();
-				stand_ac = asusAudiodec_cable_type_callback();
 				#endif
 
-				printk(KERN_INFO "%s limt_set1=%d dock_ac=%#X stand_ac=%#X\n", __func__, adapter_in, dock_ac, stand_ac);
-
-				if(dock_ac == 0x20 || stand_ac > 0x5) {
+				if(dock_ac == 0x20) {
 					printk(KERN_INFO "AC adapter + Docking 15V connect (1A)\n");
 					s_cable_info.cable_status |= 1<<1|1<<0; //0011
 					s_cable_info.ac_15v_connected = 1;
 					ask_ec_num = 0;
-				}else if(dock_ac == 0 || stand_ac == 0x5) {
+				}else if(dock_ac == 0) {
 					printk(KERN_INFO "AC adapter + Docking 5V connect (1A)\n");
 					s_cable_info.cable_status |= 1<<0; //0001
 					s_cable_info.ac_15v_connected = 0;

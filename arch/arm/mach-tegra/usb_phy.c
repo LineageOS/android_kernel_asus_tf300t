@@ -85,8 +85,6 @@ static void print_usb_plat_data_info(struct tegra_usb_phy *phy)
 				"enabled" : "disabled");
 		pr_info("remote_wakeup: %s\n", pdata->u_data.host.remote_wakeup_supported
 				? "enabled" : "disabled");
-		pr_info("power_off_on_suspend: %s\n", pdata->u_data.host.power_off_on_suspend
-				? "enabled" : "disabled");
 	}
 }
 

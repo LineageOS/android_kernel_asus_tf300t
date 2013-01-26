@@ -9653,8 +9653,8 @@ static const struct tegra_emc_table TF300T_Elpida_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x80000287, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00030003, /* MC_EMEM_ARB_CFG */
-			0xc0000020, /* MC_EMEM_ARB_OUTSTANDING_REQ */
+			0x00020001, /* MC_EMEM_ARB_CFG */
+			0xc0000010, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
@@ -9773,8 +9773,8 @@ static const struct tegra_emc_table TF300T_Elpida_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x8000040b, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00010003, /* MC_EMEM_ARB_CFG */
-			0xc0000020, /* MC_EMEM_ARB_OUTSTANDING_REQ */
+			0x00010001, /* MC_EMEM_ARB_CFG */
+			0xc0000010, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
@@ -9893,8 +9893,8 @@ static const struct tegra_emc_table TF300T_Elpida_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x80000713, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00000003, /* MC_EMEM_ARB_CFG */
-			0xc0000030, /* MC_EMEM_ARB_OUTSTANDING_REQ */
+			0x00000001, /* MC_EMEM_ARB_CFG */
+			0xc0000018, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
 			0x00000003, /* MC_EMEM_ARB_TIMING_RC */
@@ -10013,7 +10013,7 @@ static const struct tegra_emc_table TF300T_Elpida_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x80000d22, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00000006, /* MC_EMEM_ARB_CFG */
+			0x00000003, /* MC_EMEM_ARB_CFG */
 			0xc0000025, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
@@ -10133,7 +10133,7 @@ static const struct tegra_emc_table TF300T_Elpida_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x800014d4, /* EMC_DYN_SELF_REF_CONTROL */
-			0x0000000a, /* MC_EMEM_ARB_CFG */
+			0x00000005, /* MC_EMEM_ARB_CFG */
 			0xc000003d, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
@@ -10180,7 +10180,7 @@ static const struct tegra_emc_table TF300T_Elpida_1GB_667MHZ[] ={
 			0x00000001, /* EMC_REXT */
 			0x00000000, /* EMC_WEXT */
 			0x00000007, /* EMC_WDV */
-			0x0000000a, /* EMC_QUSE */
+			0x0000000b, /* EMC_QUSE */
 			0x00000009, /* EMC_QRST */
 			0x0000000a, /* EMC_QSAFE */
 			0x00000011, /* EMC_RDV */
@@ -10201,8 +10201,8 @@ static const struct tegra_emc_table TF300T_Elpida_1GB_667MHZ[] ={
 			0x00000006, /* EMC_TCLKSTABLE */
 			0x00000007, /* EMC_TCLKSTOP */
 			0x00001453, /* EMC_TREFBW */
-			0x0000000b, /* EMC_QUSE_EXTRA */
-			0x00000006, /* EMC_FBIO_CFG6 */
+			0x0000000c, /* EMC_QUSE_EXTRA */
+			0x00000004, /* EMC_FBIO_CFG6 */
 			0x00000000, /* EMC_ODT_WRITE */
 			0x00000000, /* EMC_ODT_READ */
 			0x00005088, /* EMC_FBIO_CFG5 */
@@ -10253,7 +10253,7 @@ static const struct tegra_emc_table TF300T_Elpida_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x800028a5, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00000014, /* MC_EMEM_ARB_CFG */
+			0x0000000a, /* MC_EMEM_ARB_CFG */
 			0xc0000079, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000003, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000004, /* MC_EMEM_ARB_TIMING_RP */
@@ -10377,8 +10377,8 @@ static const struct tegra_emc_table TF300T_Hynix_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x80000287, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00030003, /* MC_EMEM_ARB_CFG */
-			0xc0000020, /* MC_EMEM_ARB_OUTSTANDING_REQ */
+			0x00020001, /* MC_EMEM_ARB_CFG */
+			0xc0000010, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
@@ -10497,8 +10497,8 @@ static const struct tegra_emc_table TF300T_Hynix_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x8000040b, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00010003, /* MC_EMEM_ARB_CFG */
-			0xc0000020, /* MC_EMEM_ARB_OUTSTANDING_REQ */
+			0x00010001, /* MC_EMEM_ARB_CFG */
+			0xc0000010, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RC */
@@ -10617,8 +10617,8 @@ static const struct tegra_emc_table TF300T_Hynix_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x80000713, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00000003, /* MC_EMEM_ARB_CFG */
-			0xc0000030, /* MC_EMEM_ARB_OUTSTANDING_REQ */
+			0x00000001, /* MC_EMEM_ARB_CFG */
+			0xc0000018, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
 			0x00000003, /* MC_EMEM_ARB_TIMING_RC */
@@ -10737,7 +10737,7 @@ static const struct tegra_emc_table TF300T_Hynix_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x80000d22, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00000006, /* MC_EMEM_ARB_CFG */
+			0x00000003, /* MC_EMEM_ARB_CFG */
 			0xc0000025, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RP */
@@ -10857,7 +10857,7 @@ static const struct tegra_emc_table TF300T_Hynix_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x800014d4, /* EMC_DYN_SELF_REF_CONTROL */
-			0x0000000a, /* MC_EMEM_ARB_CFG */
+			0x00000005, /* MC_EMEM_ARB_CFG */
 			0xc000003d, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000001, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000002, /* MC_EMEM_ARB_TIMING_RP */
@@ -10904,7 +10904,7 @@ static const struct tegra_emc_table TF300T_Hynix_1GB_667MHZ[] ={
 			0x00000001, /* EMC_REXT */
 			0x00000000, /* EMC_WEXT */
 			0x00000007, /* EMC_WDV */
-			0x0000000a, /* EMC_QUSE */
+			0x0000000b, /* EMC_QUSE */
 			0x00000009, /* EMC_QRST */
 			0x0000000a, /* EMC_QSAFE */
 			0x00000011, /* EMC_RDV */
@@ -10925,8 +10925,8 @@ static const struct tegra_emc_table TF300T_Hynix_1GB_667MHZ[] ={
 			0x00000006, /* EMC_TCLKSTABLE */
 			0x00000007, /* EMC_TCLKSTOP */
 			0x00001453, /* EMC_TREFBW */
-			0x0000000b, /* EMC_QUSE_EXTRA */
-			0x00000006, /* EMC_FBIO_CFG6 */
+			0x0000000c, /* EMC_QUSE_EXTRA */
+			0x00000004, /* EMC_FBIO_CFG6 */
 			0x00000000, /* EMC_ODT_WRITE */
 			0x00000000, /* EMC_ODT_READ */
 			0x00005088, /* EMC_FBIO_CFG5 */
@@ -10977,7 +10977,7 @@ static const struct tegra_emc_table TF300T_Hynix_1GB_667MHZ[] ={
 			0x00000000, /* EMC_CTT */
 			0x00000000, /* EMC_CTT_DURATION */
 			0x800028a5, /* EMC_DYN_SELF_REF_CONTROL */
-			0x00000014, /* MC_EMEM_ARB_CFG */
+			0x0000000a, /* MC_EMEM_ARB_CFG */
 			0xc0000079, /* MC_EMEM_ARB_OUTSTANDING_REQ */
 			0x00000003, /* MC_EMEM_ARB_TIMING_RCD */
 			0x00000004, /* MC_EMEM_ARB_TIMING_RP */
@@ -16084,12 +16084,14 @@ int cardhu_emc_init(void)
 	if (ret < 0) {
 		printk("cardhu_emc_init: request MEMORY_BOOSTRAP_PIN_AD4 failed\n");
 		WARN_ON(1);
+		goto err_handle;
 	}
 
 	ret= gpio_direction_input(MEMORY_BOOSTRAP_PIN_AD4);
 	if (ret < 0) {
 		printk("cardhu_emc_init: failed to configure MEMORY_BOOSTRAP_PIN_AD4\n");
 		WARN_ON(1);
+		goto err_handle;
 	}
 	mem_bootstrap_ad4=gpio_get_value(MEMORY_BOOSTRAP_PIN_AD4);
 
@@ -16098,12 +16100,14 @@ int cardhu_emc_init(void)
 	if (ret < 0) {
 		printk("cardhu_emc_init: request MEMORY_BOOSTRAP_PIN_AD5 failed\n");
 		WARN_ON(1);
+		goto err_handle;
 	}
 
 	ret= gpio_direction_input(MEMORY_BOOSTRAP_PIN_AD5);
 	if (ret < 0) {
 		printk("cardhu_emc_init: failed to configure MEMORY_BOOSTRAP_PIN_AD4\n");
 		WARN_ON(1);
+		goto err_handle;
 	}
 	mem_bootstrap_ad5=gpio_get_value(MEMORY_BOOSTRAP_PIN_AD5);
 
@@ -16111,12 +16115,6 @@ int cardhu_emc_init(void)
 
 	switch (board.board_id) {
 	case BOARD_PM269:
-		if (project_info == TEGRA3_PROJECT_TF201) {
-			tegra_init_dram_bit_map(pm269_bit_swap_map,
-				ARRAY_SIZE(pm269_bit_swap_map));
-		}
-		/* fall through */
-	case BOARD_E1257:
 		if(project_info == TEGRA3_PROJECT_TF300T)
 		{
 			if((mem_bootstrap_ad4==0)  && (mem_bootstrap_ad5==0) )
@@ -16137,6 +16135,7 @@ int cardhu_emc_init(void)
 				tegra_init_emc(TF300T_Micron_1GB_667MHZ,
 					ARRAY_SIZE(TF300T_Micron_1GB_667MHZ));
 			}
+			break;
 		}
 		else if(project_info == TEGRA3_PROJECT_TF300TG)
 		{
@@ -16158,6 +16157,7 @@ int cardhu_emc_init(void)
 				tegra_init_emc(TF300TG_Micron_1GB_667MHZ,
 					ARRAY_SIZE(TF300TG_Micron_1GB_667MHZ));
 			}
+			break;
 		}
 		else if(project_info == TEGRA3_PROJECT_TF300TL)
 		{
@@ -16173,6 +16173,7 @@ int cardhu_emc_init(void)
 				tegra_init_emc(TF300TL_Hynix_1GB_667MHZ,
 					ARRAY_SIZE(TF300TL_Hynix_1GB_667MHZ));
 			}
+			break;
 		}
 		else if(project_info == TEGRA3_PROJECT_TF500T)
 		{
@@ -16189,6 +16190,7 @@ int cardhu_emc_init(void)
 				tegra_init_emc(TF500T_Elpida_1GB_667MHZ,
 					ARRAY_SIZE(TF500T_Elpida_1GB_667MHZ));
 			}
+			break;
 		}
 		else if(project_info == TEGRA3_PROJECT_TF700T)
 		{
@@ -16202,27 +16204,30 @@ int cardhu_emc_init(void)
 					printk("BOARD_PM269:TF700T_Elpida  800 MHZ version 5 (0413)\n");
 					tegra_init_emc(TF700T_Elpida_1GB, ARRAY_SIZE(TF700T_Elpida_1GB));
 				}
+			break;
 		}
 		else if(project_info == TEGRA3_PROJECT_P1801)
 		{
 			printk("BOARD_PM269:P1801 800MHZ\n");
 			tegra_init_emc(P1801_1GB_800MHZ,
 				ARRAY_SIZE(P1801_1GB_800MHZ));
-		} else if (project_info == TEGRA3_PROJECT_TF201) {
-			if((mem_bootstrap_ad4==1)  && (mem_bootstrap_ad5==0)) {
-				printk("BOARD_PM269: dvfs_TF201_500MHZ \n");
-				tegra_init_emc(dvfs_TF201_500MHZ,
-						ARRAY_SIZE(dvfs_TF201_500MHZ));
-			} else {
-				printk("BOARD_PM269:  [%u %u]elpida_1GB_EDB8132B2MA_8D_lpddr2_400MHz\n",mem_bootstrap_ad5,mem_bootstrap_ad4);
-				tegra_init_emc(elpida_1GB_EDB8132B2MA_8D_lpddr2_400MHz,
-					ARRAY_SIZE(elpida_1GB_EDB8132B2MA_8D_lpddr2_400MHz));
-			}
-		} else {
-			printk("Invalid project info, disable EMC DVFS!\n");
-			return 0;
+			break;
 		}
+		else
+		{
+			tegra_init_dram_bit_map(pm269_bit_swap_map,
+				ARRAY_SIZE(pm269_bit_swap_map));
+		}
+		/* fall through */
+	case BOARD_E1257:
+		if (MEMORY_TYPE(board.sku) == SKU_MEMORY_ELPIDA)
+			tegra_init_emc(cardhu_emc_tables_edb8132b2ma,
+				ARRAY_SIZE(cardhu_emc_tables_edb8132b2ma));
+		else
+			tegra_init_emc(cardhu_emc_tables_k4p8g304eb,
+				ARRAY_SIZE(cardhu_emc_tables_k4p8g304eb));
 		break;
+
 	case BOARD_PM305:
 		break;
 	case BOARD_PM311:
@@ -16245,6 +16250,20 @@ int cardhu_emc_init(void)
 			tegra_init_emc(cardhu_emc_tables_h5tc2g_a2_2GB1R,
 				ARRAY_SIZE(cardhu_emc_tables_h5tc2g_a2_2GB1R));
 		break;
+	}
+
+	return 0;
+
+err_handle:
+	if(tegra_init_emc(dvfs_TF201_500MHZ,
+			ARRAY_SIZE(dvfs_TF201_500MHZ)))
+	{
+		printk("[unknow board id]select dvfs_TF201_500MHZ \n");
+	}
+	else if(tegra_init_emc(elpida_1GB_EDB8132B2MA_8D_lpddr2_400MHz,
+			ARRAY_SIZE(elpida_1GB_EDB8132B2MA_8D_lpddr2_400MHz)))
+	{
+		printk("[unknow board id]select elpida_1GB_EDB8132B2MA_8D_lpddr2_400MHz \n");
 	}
 
 	return 0;

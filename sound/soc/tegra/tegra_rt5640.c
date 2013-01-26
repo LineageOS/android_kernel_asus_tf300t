@@ -60,8 +60,6 @@
 #define GPIO_EXT_MIC_EN BIT(3)
 #define GPIO_HP_DET     BIT(4)
 
-extern void audio_dock_init(void);
-
 struct tegra_rt5640 {
 	struct tegra_asoc_utils_data util_data;
 	struct tegra_rt5640_platform_data *pdata;
@@ -441,7 +439,6 @@ static const struct snd_soc_dapm_widget cardhu_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone Jack", NULL),
 	SND_SOC_DAPM_MIC("Mic Jack", NULL),
 	SND_SOC_DAPM_MIC("Int Mic", NULL),
-	SND_SOC_DAPM_SPK("AUX", NULL),
 };
 
 static const struct snd_soc_dapm_route cardhu_audio_map[] = {
@@ -455,8 +452,6 @@ static const struct snd_soc_dapm_route cardhu_audio_map[] = {
 	{"DMIC R1", NULL, "Int Mic"},
 	{"micbias2", NULL, "Mic Jack"},
 	{"MIC2", NULL, "micbias2"},
-	{"AUX", NULL, "LOUTL"},
-	{"AUX", NULL, "LOUTR"},
 };
 
 static const struct snd_kcontrol_new cardhu_controls[] = {
@@ -464,7 +459,6 @@ static const struct snd_kcontrol_new cardhu_controls[] = {
 	SOC_DAPM_PIN_SWITCH("Headphone Jack"),
 	SOC_DAPM_PIN_SWITCH("Mic Jack"),
 	SOC_DAPM_PIN_SWITCH("Int Mic"),
-	SOC_DAPM_PIN_SWITCH("AUX"),
 };
 
 static int tegra_rt5640_init(struct snd_soc_pcm_runtime *rtd)
@@ -511,7 +505,6 @@ static int tegra_rt5640_init(struct snd_soc_pcm_runtime *rtd)
 	snd_soc_dapm_disable_pin(dapm, "Int Spk");
 	snd_soc_dapm_disable_pin(dapm, "Mic Jack");
 	snd_soc_dapm_disable_pin(dapm, "Int Mic");
-	snd_soc_dapm_disable_pin(dapm, "AUX");
 
 	snd_soc_dapm_sync(dapm);
 
@@ -711,7 +704,6 @@ static int __init tegra_rt5640_modinit(void)
 		return 0;
 	}
 	ret = platform_driver_register(&tegra_rt5640_driver);
-	audio_dock_init();
 	printk(KERN_INFO "%s- #####\n", __func__);
 	return ret;
 }

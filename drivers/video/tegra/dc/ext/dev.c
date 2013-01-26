@@ -302,12 +302,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			(flip_win->attr.flags & TEGRA_DC_EXT_FLIP_FLAG_CURSOR))
 			skip_flip = true;
 
-		if (skip_flip)
-			old_handle = flip_win->handle[TEGRA_DC_Y];
-		else
-			old_handle = ext_win->cur_handle[TEGRA_DC_Y];
-
-		if (old_handle) {
+		if (win->flags & TEGRA_WIN_FLAG_ENABLED) {
 			int j;
 			for (j = 0; j < TEGRA_DC_NUM_PLANES; j++) {
 				if (skip_flip)
