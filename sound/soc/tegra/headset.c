@@ -77,8 +77,14 @@ enum{
 	HEADSET_WITHOUT_MIC = 2,
 };
 
+enum{
+	NO_LINEOUT = 0,
+	LINEOUT_IN = 1,
+};
+
 struct headset_data {
 	struct switch_dev sdev;
+	struct switch_dev ldev;
 	struct input_dev *input;
 	unsigned int irq;
 	struct hrtimer timer;
@@ -107,6 +113,31 @@ extern int force_headphone;
 extern int audio_dock_in_out(u8 status);
 extern bool isAudioStandIn(void);
 extern int audio_stand_route(bool);
+
+static ssize_t lineout_name_show(struct switch_dev *ldev, char *buf)
+{
+        switch (switch_get_state(&hs_data->ldev)){
+        case NO_LINEOUT:{
+                return sprintf(buf, "%s\n", "No Device");
+                }
+        case LINEOUT_IN:{
+                return sprintf(buf, "%s\n", "LINEOUT_IN");
+                }
+        }
+        return -EINVAL;
+}
+
+static ssize_t lineout_state_show(struct switch_dev *ldev, char *buf)
+{
+        switch (switch_get_state(&hs_data->ldev)){
+        case NO_LINEOUT:
+                return sprintf(buf, "%d\n", 0);
+        case LINEOUT_IN:
+                return sprintf(buf, "%d\n", 1);
+        }
+        return -EINVAL;
+}
+
 
 static ssize_t headset_name_show(struct switch_dev *sdev, char *buf)
 {
@@ -276,10 +307,12 @@ static void lineout_work_queue(struct work_struct *work)
 		printk("LINEOUT: LineOut inserted\n");
 		lineout_alive = true;
 		audio_stand_route(true);
+		switch_set_state(&hs_data->ldev, LINEOUT_IN);
 	}else if(gpio_get_value(LINEOUT_GPIO)){
 		printk("LINEOUT: LineOut removed\n");
 		lineout_alive = false;
 		audio_stand_route(false);
+		switch_set_state(&hs_data->ldev, NO_DEVICE);
 	}
 
 }
@@ -305,9 +338,11 @@ static int lineout_config_gpio()
 	if (gpio_get_value(LINEOUT_GPIO) == 0){
 		lineout_alive = true;
 		audio_stand_route(true);
+		switch_set_state(&hs_data->ldev, LINEOUT_IN);
 	}else{
 		lineout_alive = false;
 		audio_stand_route(false);
+		switch_set_state(&hs_data->ldev, NO_DEVICE);
 	}
 
 	return 0;
@@ -454,7 +489,15 @@ static int __init headset_init(void)
 	hs_data->sdev.print_name = headset_name_show;
 	hs_data->sdev.print_state = headset_state_show;
 
+	hs_data->ldev.name = "lineout";
+	hs_data->ldev.print_name = lineout_name_show;
+	hs_data->ldev.print_state = lineout_state_show;
+
 	ret = switch_dev_register(&hs_data->sdev);
+	if (ret < 0)
+		goto err_switch_dev_register;
+
+	ret = switch_dev_register(&hs_data->ldev);
 	if (ret < 0)
 		goto err_switch_dev_register;
 
