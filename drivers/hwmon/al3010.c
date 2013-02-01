@@ -66,7 +66,7 @@ static struct workqueue_struct *sensor_work_queue;
 struct i2c_client *al3010_client;
 
 static struct timeval t_first_poll_time;
-static bool light_sensor_ready = true;
+static bool light_sensor_ready = false;
 static bool catch_first_poll_time = false;
 static int time_for_sensor_ready = 100; //milisecond
 

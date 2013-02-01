@@ -285,6 +285,36 @@ static struct platform_device cardhu_backlight_device = {
 	},
 };
 
+static int cardhu_panel_postpoweron(void)
+{
+	printk("Check cardhu_panel_postpoweron \n");
+	if(tegra3_get_project_id()!=0x4)
+	{
+		if (cardhu_lvds_reg == NULL) {
+			cardhu_lvds_reg = regulator_get(NULL, "vdd_lvds");
+			if (WARN_ON(IS_ERR(cardhu_lvds_reg)))
+				pr_err("%s: couldn't get regulator vdd_lvds: %ld\n",
+					__func__, PTR_ERR(cardhu_lvds_reg));
+			else
+				regulator_enable(cardhu_lvds_reg);
+		}
+
+		gpio_set_value(e1247_pm269_lvds_shutdown, 1);
+		msleep(210);
+
+		if (cardhu_lvds_vdd_bl == NULL) {
+			cardhu_lvds_vdd_bl = regulator_get(NULL, "vdd_backlight");
+			if (WARN_ON(IS_ERR(cardhu_lvds_vdd_bl)))
+				pr_err("%s: couldn't get regulator vdd_backlight: %ld\n",
+				__func__, PTR_ERR(cardhu_lvds_vdd_bl));
+			else
+				regulator_enable(cardhu_lvds_vdd_bl);
+		}
+		msleep(10);
+	}
+	return 0;
+}
+
 static int cardhu_panel_enable(void)
 {
 	int ret;
@@ -322,13 +352,16 @@ static int cardhu_panel_enable(void)
 		mdelay(5);
 	}
 
-	if (cardhu_lvds_reg == NULL) {
-		cardhu_lvds_reg = regulator_get(NULL, "vdd_lvds");
-		if (WARN_ON(IS_ERR(cardhu_lvds_reg)))
-			pr_err("%s: couldn't get regulator vdd_lvds: %ld\n",
-				__func__, PTR_ERR(cardhu_lvds_reg));
-		else
-			regulator_enable(cardhu_lvds_reg);
+	if (tegra3_get_project_id()==0x4)
+	{
+		if (cardhu_lvds_reg == NULL) {
+			cardhu_lvds_reg = regulator_get(NULL, "vdd_lvds");
+			if (WARN_ON(IS_ERR(cardhu_lvds_reg)))
+				pr_err("%s: couldn't get regulator vdd_lvds: %ld\n",
+					__func__, PTR_ERR(cardhu_lvds_reg));
+			else
+				regulator_enable(cardhu_lvds_reg);
+		}
 	}
 
 	if (cardhu_lvds_vdd_panel == NULL) {
@@ -368,48 +401,56 @@ static int cardhu_panel_enable(void)
 			mdelay(10);
 
 	}
+	if(tegra3_get_project_id()==0x4)
+	{
+		if (display_board_info.board_id == BOARD_DISPLAY_PM313) {
+			/* lvds configuration */
+			gpio_set_value(pm313_R_FDE, 1);
+			gpio_set_value(pm313_R_FB, 1);
+			gpio_set_value(pm313_MODE0, 1);
+			gpio_set_value(pm313_MODE1, 0);
+			gpio_set_value(pm313_BPP, PM313_LVDS_PANEL_BPP);
 
-	if (display_board_info.board_id == BOARD_DISPLAY_PM313) {
-		/* lvds configuration */
-		gpio_set_value(pm313_R_FDE, 1);
-		gpio_set_value(pm313_R_FB, 1);
-		gpio_set_value(pm313_MODE0, 1);
-		gpio_set_value(pm313_MODE1, 0);
-		gpio_set_value(pm313_BPP, PM313_LVDS_PANEL_BPP);
+			/* FIXME : it may require more or less delay for latching
+			  values correctly before enabling RGB2LVDS */
+			mdelay(100);
+			gpio_set_value(pm313_lvds_shutdown, 1);
+		} else {
+			gpio_set_value(e1247_pm269_lvds_shutdown, 1);
+		}
 
-		/* FIXME : it may require more or less delay for latching
-		  values correctly before enabling RGB2LVDS */
-		mdelay(100);
-		gpio_set_value(pm313_lvds_shutdown, 1);
-	} else {
-		gpio_set_value(e1247_pm269_lvds_shutdown, 1);
-	}
-
-	if (tegra3_get_project_id()!=0x4 ){
-		msleep(210);
-	}
-
-	if (tegra3_get_project_id()==0x4 ){
 		ret = gpio_direction_output(TEGRA_GPIO_PD2, 1);
 		if (ret < 0) {
 			printk("Check can not pull high TF700T_OSC(TEGRA_GPIO_PD2) \n");
 			gpio_free(TEGRA_GPIO_PD2);
 			return ret;
 		}
+		msleep(10);
 	}
+	return 0;
+}
 
+static int cardhu_panel_prepoweroff(void)
+{
 	if (tegra3_get_project_id()!=0x4 ){
-		if (cardhu_lvds_vdd_bl == NULL) {
-			cardhu_lvds_vdd_bl = regulator_get(NULL, "vdd_backlight");
-			if (WARN_ON(IS_ERR(cardhu_lvds_vdd_bl)))
-				pr_err("%s: couldn't get regulator vdd_backlight: %ld\n",
-				__func__, PTR_ERR(cardhu_lvds_vdd_bl));
-			else
-				regulator_enable(cardhu_lvds_vdd_bl);
+		// For TF300T EN_VDD_BL is always on, no need to control cardhu_lvds_vdd_bl
+		// But for TF300TG/TL, EN_VDD_BL is BL_EN, need to control it
+		// EE confirms that we can control it in original timing because
+		// EN_VDD_BL/LCD_BL_PWM/LCD_BL_EN pull high/low almost the same time
+		if(cardhu_lvds_vdd_bl) {
+			regulator_disable(cardhu_lvds_vdd_bl);
+			regulator_put(cardhu_lvds_vdd_bl);
+			cardhu_lvds_vdd_bl = NULL;
 		}
-	}
-	msleep(10);
+		msleep(200);
 
+		if (display_board_info.board_id == BOARD_DISPLAY_PM313) {
+			gpio_set_value(pm313_lvds_shutdown, 0);
+		} else {
+			gpio_set_value(e1247_pm269_lvds_shutdown, 0);
+		}
+		msleep(10);
+	}
 	return 0;
 }
 
@@ -454,21 +495,6 @@ static int cardhu_panel_disable(void)
 		regulator_put(cardhu_lvds_reg);
 		cardhu_lvds_reg = NULL;
 	}
-
-	msleep(10);
-	if(cardhu_lvds_vdd_bl) {
-		regulator_disable(cardhu_lvds_vdd_bl);
-		regulator_put(cardhu_lvds_vdd_bl);
-		cardhu_lvds_vdd_bl = NULL;
-	}
-	msleep(250);
-
-	if (display_board_info.board_id == BOARD_DISPLAY_PM313) {
-		gpio_set_value(pm313_lvds_shutdown, 0);
-	} else {
-		gpio_set_value(e1247_pm269_lvds_shutdown, 0);
-	}
-	msleep(20);
 
 	if(cardhu_lvds_vdd_panel) {
 		regulator_disable(cardhu_lvds_vdd_panel);
@@ -1233,6 +1259,8 @@ static struct tegra_dc_out cardhu_disp1_out = {
 	.sd_settings	= &cardhu_sd_settings,
 	.parent_clk	= "pll_p",
 
+	.postpoweron	= cardhu_panel_postpoweron,
+	.prepoweroff	= cardhu_panel_prepoweroff,
 };
 
 static struct tegra_dc_out cardhu_disp1_out_P1801 = {

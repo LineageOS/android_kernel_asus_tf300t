@@ -104,6 +104,9 @@ bool need_spk;
 extern int PRJ_ID;
 extern unsigned int factory_mode;
 extern int force_headphone;
+extern int audio_dock_in_out(u8 status);
+extern bool isAudioStandIn(void);
+extern int audio_stand_route(bool);
 
 static ssize_t headset_name_show(struct switch_dev *sdev, char *buf)
 {
@@ -263,13 +266,20 @@ static int btn_config_gpio()
 static void lineout_work_queue(struct work_struct *work)
 {
 	msleep(300);
+	/* check if audio stand is inserted */
+	if(!isAudioStandIn()){
+		printk("LINEOUT: No Audio Stand in\n");
+		return;
+	}
 
 	if (gpio_get_value(LINEOUT_GPIO) == 0){
 		printk("LINEOUT: LineOut inserted\n");
 		lineout_alive = true;
-	}else if(gpio_get_value(LINEOUT_GPIO) && need_spk){
+		audio_stand_route(true);
+	}else if(gpio_get_value(LINEOUT_GPIO)){
 		printk("LINEOUT: LineOut removed\n");
 		lineout_alive = false;
+		audio_stand_route(false);
 	}
 
 }
@@ -289,12 +299,16 @@ static int lineout_config_gpio()
 	tegra_gpio_enable(LINEOUT_GPIO);
 	ret = gpio_request(LINEOUT_GPIO, "lineout_int");
 	ret = gpio_direction_input(LINEOUT_GPIO);
-	ret = request_irq(gpio_to_irq(LINEOUT_GPIO), &lineout_irq_handler, IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, "lineout_int", 0);
+	ret = request_irq(gpio_to_irq(LINEOUT_GPIO), &lineout_irq_handler,
+			IRQF_TRIGGER_FALLING|IRQF_TRIGGER_RISING, "lineout_int", 0);
 
-	if (gpio_get_value(LINEOUT_GPIO) == 0)
+	if (gpio_get_value(LINEOUT_GPIO) == 0){
 		lineout_alive = true;
-	else
+		audio_stand_route(true);
+	}else{
 		lineout_alive = false;
+		audio_stand_route(false);
+	}
 
 	return 0;
 }
