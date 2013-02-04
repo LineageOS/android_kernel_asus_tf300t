@@ -191,7 +191,7 @@
 #define ICATCH7002A_AF_PWR_EN_GPIO TEGRA_GPIO_PS0
 #define ICATCH7002A_VDDIO_EN_GPIO TEGRA_GPIO_PBB4
 #define ICATCH7002A_PWR_DN_GPIO TEGRA_GPIO_PBB5
-#define ICATCH7002A_VDDC_EN_GPIO TEGRA_GPIO_PBB7 //flash for TF500T
+#define ICATCH7002A_VDDC_EN_GPIO TEGRA_GPIO_PBB7
 #define ICATCH7002A_VDDA_EN_GPIO TEGRA_GPIO_PR6  //KB_ROW6
 #define ICATCH7002A_ISP_1V2_EN TEGRA_GPIO_PS3   //For TF500T; PBB7 in other porjects
 #define ICATCH7002A_CAM_2V85_EN TEGRA_GPIO_PR7
@@ -237,6 +237,8 @@ int cardhu_pm298_gpio_switch_regulator_init(void);
 int cardhu_pm298_regulator_init(void);
 int cardhu_pm299_gpio_switch_regulator_init(void);
 int cardhu_pm299_regulator_init(void);
+struct platform_device *tegra_usb3_utmip_host_register(void);
+void tegra_usb3_utmip_host_unregister(struct platform_device *pdev);
 
 /* Invensense MPU Definitions */
 #define MPU3050_GYRO_NAME		"mpu3050"

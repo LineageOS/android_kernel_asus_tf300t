@@ -79,6 +79,12 @@ static int poll_rate = 0;
 static struct delayed_work poll_audio_work;
 static int count_base = 1;
 static int count_100 = 0;
+
+extern int asusAudiodec_i2c_write_data(char *data, int length);
+extern int asusAudiodec_i2c_read_data(char *data, int length);
+
+static int hp_amp_count = 0;
+
 #include "rt5640.h"
 #if defined(CONFIG_SND_SOC_RT5642_MODULE) || defined(CONFIG_SND_SOC_RT5642)
 #include "rt5640-dsp.h"
@@ -1637,6 +1643,7 @@ static int rt5640_spk_event(struct snd_soc_dapm_widget *w,
 
 static void rt5640_pmu_depop(struct snd_soc_codec *codec)
 {
+	hp_amp_count++;
 	/* depop parameters */
 	snd_soc_update_bits(codec, RT5640_DEPOP_M2,
 		RT5640_DEPOP_MASK, RT5640_DEPOP_MAN);
@@ -1688,6 +1695,8 @@ static void rt5640_pmu_depop(struct snd_soc_codec *codec)
 
 static void rt5640_pmd_depop(struct snd_soc_codec *codec)
 {
+	if(--hp_amp_count)
+		return;
 	/* headphone mute sequence */
 	snd_soc_update_bits(codec, RT5640_DEPOP_M3,
 		RT5640_CP_FQ1_MASK | RT5640_CP_FQ2_MASK | RT5640_CP_FQ3_MASK,
@@ -1770,17 +1779,23 @@ static int rt5640_lout_event(struct snd_soc_dapm_widget *w,
 	struct snd_kcontrol *kcontrol, int event)
 {
 	struct snd_soc_codec *codec = w->codec;
+	char mute_all_audioDock[2] = {0xFF, 0x01};
+	char unmute_all_audioDock[2] = {0x00, 0x01};
 
 	switch (event) {
 	case SND_SOC_DAPM_POST_PMU:
+		rt5640_pmu_depop(codec);
 		snd_soc_update_bits(codec, RT5640_OUTPUT,
 			RT5640_L_MUTE | RT5640_R_MUTE, 0);
+		asusAudiodec_i2c_write_data(unmute_all_audioDock, 2);
 		break;
 
 	case SND_SOC_DAPM_PRE_PMD:
+		asusAudiodec_i2c_write_data(mute_all_audioDock, 2);
 		snd_soc_update_bits(codec, RT5640_OUTPUT,
 			RT5640_L_MUTE | RT5640_R_MUTE,
 			RT5640_L_MUTE | RT5640_R_MUTE);
+		rt5640_pmd_depop(codec);
 		break;
 
 	default:

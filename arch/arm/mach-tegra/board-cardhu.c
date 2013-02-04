@@ -1329,7 +1329,7 @@ static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
 //		.vbus_reg = "vdd_vbus_typea_usb",
 		.hot_plug = true,
 		.remote_wakeup_supported = true,
-		.power_off_on_suspend = false,
+		.power_off_on_suspend = true,
 	},
 	.u_cfg.utmi = {
 		.hssync_start_delay = 0,
@@ -1374,6 +1374,44 @@ static struct tegra_usb_otg_data tegra_otg_pdata = {
 	.ehci_pdata = &tegra_ehci1_utmi_pdata,
 };
 #endif
+
+struct platform_device *tegra_usb3_utmip_host_register(void)
+{
+	struct platform_device *pdev;
+	void *platform_data;
+	int val;
+
+	pdev = platform_device_alloc(tegra_ehci3_device.name, tegra_ehci3_device.id);
+	if (!pdev)
+		return NULL;
+
+	val = platform_device_add_resources(pdev, tegra_ehci3_device.resource, tegra_ehci3_device.num_resources);
+	if (val)
+		goto error;
+
+	pdev->dev.dma_mask =  tegra_ehci3_device.dev.dma_mask;
+	pdev->dev.coherent_dma_mask = tegra_ehci3_device.dev.coherent_dma_mask;
+
+	val = platform_device_add_data(pdev, &tegra_ehci3_utmi_pdata, sizeof(struct tegra_usb_platform_data));
+	if (val)
+		goto error;
+
+	val = platform_device_add(pdev);
+	if (val)
+		goto error;
+
+	return pdev;
+
+error:
+	pr_err("%s: failed to add the host contoller device\n", __func__);
+	platform_device_put(pdev);
+	return NULL;
+}
+
+void tegra_usb3_utmip_host_unregister(struct platform_device *pdev)
+{
+	platform_device_unregister(pdev);
+}
 
 #if defined(CONFIG_USB_SUPPORT)
 static void cardhu_usb_init(void)
