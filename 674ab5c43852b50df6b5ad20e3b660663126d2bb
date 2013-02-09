@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "AAAAdH//+uY\u003d",
+        "filename": "include/linux/elevator.h",
+        "patchSetId": 2
+      },
+      "lineNbr": 23,
+      "author": {
+        "id": 3917
+      },
+      "writtenOn": "2013-02-09T04:08:07Z",
+      "side": 1,
+      "message": "Hi,\n\nLooks like this is not going to apply cleanly?\nWhat about redoing the patches? I was able to take the patches more or less one by one from tf700t kernel.",
+      "revId": "674ab5c43852b50df6b5ad20e3b660663126d2bb",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
