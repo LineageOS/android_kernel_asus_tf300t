@@ -58,7 +58,7 @@ static struct wifi_platform_data cardhu_wifi_control = {
 
 static struct resource wifi_resource[] = {
 	[0] = {
-		.name	= "bcm4329_wlan_irq",
+		.name	= "bcmdhd_wlan_irq",
 		.start	= TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PO4),
 		.end	= TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PO4),
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE,
@@ -66,7 +66,7 @@ static struct resource wifi_resource[] = {
 };
 
 static struct platform_device broadcom_wifi_device = {
-	.name		= "bcm4329_wlan",
+	.name		= "bcmdhd_wlan",
 	.id		= 1,
 	.num_resources	= 1,
 	.resource	= wifi_resource,
