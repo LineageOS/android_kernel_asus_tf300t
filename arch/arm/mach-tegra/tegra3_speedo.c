@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/tegra3_speedo.c
  *
- * Copyright (c) 2011, NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,9 @@
 #include <linux/err.h>
 #include <mach/iomap.h>
 #include <mach/tegra_fuse.h>
+#include <linux/module.h>
+#include <linux/moduleparam.h>
+#include <mach/board-cardhu-misc.h>
 
 #include "fuse.h"
 
@@ -128,6 +131,11 @@ static int core_process_id;
 static int cpu_speedo_id;
 static int soc_speedo_id;
 static int package_id;
+/*
+ * Only AP37 supports App Profile
+ * This informs user space of support without exposing cpu id's
+ */
+static int enable_app_profiles;
 
 static void fuse_speedo_calib(u32 *speedo_g, u32 *speedo_lp)
 {
@@ -267,6 +275,7 @@ static void rev_sku_to_speedo_ids(int rev, int sku)
 				cpu_speedo_id = 12;
 				soc_speedo_id = 2;
 				threshold_index = 9;
+				enable_app_profiles = 1;
 				break;
 			default:
 				pr_err("Tegra3 Rev-A02: Reserved pkg: %d\n",
@@ -348,6 +357,7 @@ void tegra_init_speedo_data(void)
 	int fuse_sku = tegra_sku_id();
 	int sku_override = tegra_get_sku_override();
 	int new_sku = fuse_sku;
+	unsigned int project_id = tegra3_get_project_id();
 
 	/* Package info: 4 bits - 0,3:reserved 1:MID 2:DSC */
 	package_id = tegra_fuse_readl(FUSE_PACKAGE_INFO) & 0x0F;
@@ -418,6 +428,11 @@ void tegra_init_speedo_data(void)
 	rev_sku_to_speedo_ids(tegra_get_revision(), new_sku);
 	BUG_ON(threshold_index >= ARRAY_SIZE(cpu_process_speedos));
 
+	if(TEGRA3_PROJECT_P1801 == project_id && cpu_speedo_id == 7)
+	{
+		threshold_index = 8;
+	}
+
 	fuse_speedo_calib(&cpu_speedo_val, &core_speedo_val);
 	pr_debug("%s CPU speedo value %u\n", __func__, cpu_speedo_val);
 	pr_debug("%s Core speedo value %u\n", __func__, core_speedo_val);
@@ -487,6 +502,13 @@ void tegra_init_speedo_data(void)
 				break;
 			}
 		}
+	}
+
+	if(TEGRA3_PROJECT_P1801 == project_id && cpu_speedo_id == 7)
+	{
+		cpu_speedo_id = 5;
+		cpu_process_id = 3;
+		soc_speedo_id = 2;
 	}
 	pr_info("Tegra3: CPU Speedo ID %d, Soc Speedo ID %d",
 		 cpu_speedo_id, soc_speedo_id);
@@ -560,3 +582,15 @@ int tegra_core_speedo_mv(void)
 		BUG();
 	}
 }
+
+static int get_enable_app_profiles(char *val, const struct kernel_param *kp)
+{
+	return param_get_uint(val, kp);
+}
+
+static struct kernel_param_ops tegra_profiles_ops = {
+	.get = get_enable_app_profiles,
+};
+
+module_param_cb(tegra_enable_app_profiles,
+	&tegra_profiles_ops, &enable_app_profiles, 0444);

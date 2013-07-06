@@ -8,15 +8,20 @@
 #include <linux/switch.h>
 #include <linux/uaccess.h>
 #include <linux/workqueue.h>
+#include <linux/wakelock.h>
 #include <../../arch/arm/mach-tegra/include/mach/board-cardhu-misc.h>
 
 #include "pm-irq.h"
 #include "ril.h"
 #include "ril_proximity.h"
 #include "ril_wakeup.h"
+#include "ril_sim.h"
+#include "ril_modem_crash.h"
 
 MODULE_DESCRIPTION(DRIVER_DESC);
 MODULE_LICENSE("GPL");
+
+static int ril_resume(struct platform_device *pdev);
 
 //**** external symbols
 
@@ -35,6 +40,19 @@ static dev_t ril_dev;
 static int ril_major = 0;
 static int ril_minor = 0;
 int project_id = 0;
+extern void tegra_ehci_modem_port_host_reregister(void);
+
+static struct platform_device ril_device = {
+	.name = "ril",
+};
+
+struct platform_driver ril_driver = {
+	.resume     = ril_resume,
+	.driver     = {
+		.name   = "ril",
+		.owner  = THIS_MODULE,
+	},
+};
 
 static struct gpio ril_gpios_TF300TG[] = {
 	{ MOD_VBUS_ON,    GPIOF_OUT_INIT_LOW,  "BB_VBUS"    },
@@ -71,8 +89,7 @@ irqreturn_t ril_ipc_sar_det_irq(int irq, void *dev_id)
 
 irqreturn_t ril_ipc_sim_det_irq(int irq, void *dev_id)
 {
-	// TODO: implement SIM hot-plug here
-	return IRQ_HANDLED;
+	return sim_interrupt_handle(irq, dev_id);
 }
 
 //**** sysfs callback functions
@@ -153,6 +170,17 @@ static ssize_t store_download_state(struct device *class, struct device_attribut
 	return store_gpio(count, buf, DL_MODE, "DL_MODE");
 }
 
+static ssize_t store_mod_host_controller_rst(struct device *class, struct attribute *attr,
+		const char *buf, size_t count)
+{
+	int state;
+
+	sscanf(buf, "%d", &state);
+	if ((state > 0) && (project_id == TEGRA3_PROJECT_TF300TL))
+		tegra_ehci_modem_port_host_reregister();
+
+	return count;
+}
 
 //**** sysfs list
 /* TF300TG sysfs array */
@@ -167,8 +195,19 @@ static struct device_attribute device_attr_TF300TL[] = {
 	__ATTR(vbat, _ATTR_MODE, show_vbat_state, store_vbat_state),
 	__ATTR(mod_rst, _ATTR_MODE, show_reset_state, store_reset_state),
 	__ATTR(dl_mode, _ATTR_MODE, show_download_state, store_download_state),
+	__ATTR(mod_host_controller_rst, _ATTR_MODE, NULL, store_mod_host_controller_rst),
 	__ATTR_NULL,
 };
+
+//**** driver operate functons
+static int ril_resume(struct platform_device *pdev)
+{
+	if (proximity_enabled) {
+		RIL_INFO("check SAR_DET_3G pin");
+		check_sar_det_3g();
+	}
+	return 0;
+}
 
 //**** initialize and finalize
 
@@ -277,9 +316,6 @@ static int __init ril_init(void)
 	/* enable and request gpio(s) */
 	if (project_id == TEGRA3_PROJECT_TF300TG) {
 		RIL_INFO("project_id = TF300TG\n");
-		for (i = 0; i < ARRAY_SIZE(ril_gpios_TF300TG); i++) {
-			tegra_gpio_enable(ril_gpios_TF300TG[i].gpio);
-		}
 		err = gpio_request_array(ril_gpios_TF300TG,
 				ARRAY_SIZE(ril_gpios_TF300TG));
 		if (err < 0) {
@@ -288,9 +324,6 @@ static int __init ril_init(void)
 		}
 	} else if (project_id == TEGRA3_PROJECT_TF300TL) {
 		RIL_INFO("project_id = TF300TL\n");
-		for (i = 0; i < ARRAY_SIZE(ril_gpios_TF300TL); i++) {
-			tegra_gpio_enable(ril_gpios_TF300TL[i].gpio);
-		}
 		err = gpio_request_array(ril_gpios_TF300TL,
 				ARRAY_SIZE(ril_gpios_TF300TL));
 		if (err < 0) {
@@ -304,10 +337,59 @@ static int __init ril_init(void)
 		return -1;
 	}
 
+	err = platform_device_register(&ril_device);
+	if(err) {
+		RIL_ERR("platform_device_register failed\n");
+		goto device_failed;
+	}
+
+	err = platform_driver_register(&ril_driver);
+	if(err) {
+		RIL_ERR("platform_driver_register failed\n");
+		goto driver_failed;
+	}
+
+	/* need to init before request SAR_DET_3G irq */
+	spin_lock_init(&proximity_irq_lock);
+
+	/* init work queue */
+	workqueue = create_singlethread_workqueue
+		("ril_workqueue");
+	if (!workqueue) {
+		pr_err("%s - cannot create workqueue\n", __func__);
+		err = -1;
+		goto failed1;
+	}
+
 	/* create device file(s) */
 	err = create_ril_files();
 	if (err < 0)
-		goto failed1;
+		goto failed2;
+
+	/* register proximity switch */
+	err = ril_proximity_init(dev, workqueue);
+	if (err < 0) {
+		pr_err("%s - register proximity switch failed\n",
+			__func__);
+		goto failed3;
+	}
+
+	/* init SIM plug functions */
+	err = sim_hot_plug_init(dev, workqueue);
+	if (err < 0) {
+		pr_err("%s - init SIM hotplug failed\n",
+			__func__);
+		goto failed4;
+	}
+
+	/* wakeup control (TF-300TL only) */
+	if (TEGRA3_PROJECT_TF300TL == project_id) {
+		err = init_wakeup_control(workqueue);
+		if (err < 0) {
+			RIL_ERR("init wakeup_control failed\n");
+			goto failed5;
+		}
+    }
 
 	/* request ril irq(s) */
 	err = request_irq(gpio_to_irq(SAR_DET_3G),
@@ -318,7 +400,7 @@ static int __init ril_init(void)
 	if (err < 0) {
 		pr_err("%s - request irq IPC_SAR_DET_3G failed\n",
 			__func__);
-		goto failed2;
+		goto failed6;
 	}
 	disable_irq(gpio_to_irq(SAR_DET_3G));
 
@@ -330,52 +412,42 @@ static int __init ril_init(void)
 	if (err < 0) {
 		pr_err("%s - request irq IPC_SIM_CARD_DET failed\n",
 			__func__);
-		goto failed3;
+		goto failed7;
 	}
 	tegra_pm_irq_set_wake_type(gpio_to_irq(SIM_CARD_DET),
 		IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING);
 	enable_irq_wake(gpio_to_irq(SIM_CARD_DET));
 
-	/* init work queue */
-	workqueue = create_singlethread_workqueue
-		("ril_workqueue");
-	if (!workqueue) {
-		pr_err("%s - cannot create workqueue\n", __func__);
-		err = -1;
-		goto failed4;
-	}
-
-	/* register proximity switch */
-	err = ril_proximity_init(dev, workqueue);
+	err = ril_modem_crash_init(dev, workqueue);
 	if (err < 0) {
-		pr_err("%s - register proximity switch failed\n",
+		pr_err("%s - init modem crash handler failed\n",
 			__func__);
-		goto failed5;
-	}
-
-	/* wakeup control (TF-300TL only) */
-	if (TEGRA3_PROJECT_TF300TL == project_id) {
-		err = init_wakeup_control(workqueue);
-		if (err < 0) {
-			RIL_ERR("init wakeup_control failed\n");
-			goto failed6;
-		}
+		goto failed8;
 	}
 
 	RIL_INFO("RIL init successfully\n");
 	return 0;
 
-failed6:
-	ril_proximity_exit();
-failed5:
-	destroy_workqueue(workqueue);
-failed4:
+failed8:
 	free_irq(gpio_to_irq(SIM_CARD_DET), NULL);
-failed3:
+failed7:
 	free_irq(gpio_to_irq(SAR_DET_3G), NULL);
-failed2:
+failed6:
+	if (TEGRA3_PROJECT_TF300TL == project_id)
+		free_wakeup_control();
+failed5:
+	sim_hot_plug_exit();
+failed4:
+	ril_proximity_exit();
+failed3:
 	remove_ril_files();
+failed2:
+	destroy_workqueue(workqueue);
 failed1:
+	platform_driver_unregister(&ril_driver);
+driver_failed:
+	platform_device_unregister(&ril_device);
+device_failed:
 	if (project_id == TEGRA3_PROJECT_TF300TG) {
 		gpio_free_array(ril_gpios_TF300TG,
 				ARRAY_SIZE(ril_gpios_TF300TG));
@@ -403,8 +475,17 @@ static void __exit ril_exit(void)
 				ARRAY_SIZE(ril_gpios_TF300TL));
 	}
 
+	platform_driver_unregister(&ril_driver);
+	platform_device_unregister(&ril_device);
+
 	/* delete device file(s) */
 	remove_ril_files();
+
+	/* unregister modem crash handler */
+	ril_modem_crash_exit();
+
+	/* unregister SIM hot plug */
+	sim_hot_plug_exit();
 
 	/* unregister proximity switch */
 	ril_proximity_exit();

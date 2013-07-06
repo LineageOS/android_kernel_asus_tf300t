@@ -568,9 +568,30 @@ config THERM_EST
 	---help---
 	Thermal driver which estimates temperature based of other sensors.
 
+config AW8EC
+	bool "ASUS embedded controller interface for P1801 base pc"
+	default n
+
+config TEGRA_THROUGHPUT
+	bool "Device node to set throughput target"
+	depends on TEGRA_DC && TEGRA_DC_EXTENSIONS
+	default y
+	---help---
+	Dev node /dev/tegra-throughput used to set a throughput target.
+
+config BLUEDROID_PM
+        tristate "Bluedroid_pm driver support"
+        help
+          Bluetooth Bluedroid power management Driver.
+          This driver provides power control and dynamic active power saving
+          mechanism for bluetooth radio devices.
+
+          Say Y here to compile support for bluedroid_pm support into the kernel
+          or say M to compile it as module (bluedroid_pm).
+
 config KERNEL_RAMDUMP
-        bool "kernel ramdump driver"
-        default y
+	bool "kernel ramdump driver"
+	default y
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

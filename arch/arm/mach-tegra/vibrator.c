@@ -63,8 +63,7 @@ static int __init vibrator_init(void)
 	 */
 	u32 project_info = tegra3_get_project_id();
         if(project_info != TEGRA3_PROJECT_TF201 &&
-	    project_info != TEGRA3_PROJECT_TF700T &&
-	    project_info != TEGRA3_PROJECT_TF500T)
+	    project_info != TEGRA3_PROJECT_TF700T)
 		return 0;
 
 	printk(KERN_INFO "%s+ #####\n", __func__);
@@ -74,7 +73,6 @@ static int __init vibrator_init(void)
 		gpio_free(TEGRA_GPIO_PH7);
 		return ret;
 	}
-	tegra_gpio_enable(TEGRA_GPIO_PH7);
 
 	/* Turn off vibrator in default*/
 	gpio_direction_output(TEGRA_GPIO_PH7, 0);

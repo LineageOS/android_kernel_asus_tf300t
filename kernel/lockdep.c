@@ -2912,6 +2912,7 @@ void lockdep_init_map(struct lockdep_map *lock, const char *name,
 		register_lock_class(lock, subclass, 1);
 }
 EXPORT_SYMBOL_GPL(lockdep_init_map);
+
 struct lock_class_key __lockdep_no_validate__;
 
 /*

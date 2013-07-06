@@ -23,6 +23,7 @@
 #include "tegra_pcm.h"
 #include "tegra_asoc_utils.h"
 #include <mach/board-cardhu-misc.h>
+#include <mach/tegra_asoc_pdata.h>
 
 #include "../drivers/input/asusec/asusdec.h"
 #include "../gpio-names.h"
@@ -53,6 +54,7 @@ static int tegra_rt5631_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = rtd->codec;
 	struct snd_soc_card *card = codec->card;
 	struct tegra_rt5631 *machine = snd_soc_card_get_drvdata(card);
+
 	int srate, mclk, i2s_daifmt;
 	int err;
 
@@ -237,9 +239,16 @@ static __devinit int tegra_rt5631_driver_probe(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = &snd_soc_tegra_rt5631;
 	struct tegra_rt5631 *machine;
+	struct tegra_asoc_platform_data *pdata;
 
 	int ret;
 	printk("%s+\n", __func__);
+
+	pdata = pdev->dev.platform_data;
+	if (!pdata) {
+		dev_err(&pdev->dev, "No platform data supplied\n");
+		return -EINVAL;
+	}
 
 	machine = kzalloc(sizeof(struct tegra_rt5631), GFP_KERNEL);
 	if (!machine) {
@@ -261,9 +270,22 @@ static __devinit int tegra_rt5631_driver_probe(struct platform_device *pdev)
 			ret);
 		goto err_fini_utils;
 	}
+
+#ifndef CONFIG_ARCH_TEGRA_2x_SOC
+	ret = tegra_asoc_utils_set_parent(&machine->util_data,
+				pdata->i2s_param[HIFI_CODEC].is_i2s_master);
+	if (ret) {
+		dev_err(&pdev->dev, "tegra_asoc_utils_set_parent failed (%d)\n",
+			ret);
+		goto err_unregister_card;
+	}
+#endif
+
 	printk("%s-\n", __func__);
 	return 0;
 
+err_unregister_card:
+	snd_soc_unregister_card(card);
 err_fini_utils:
 	tegra_asoc_utils_fini(&machine->util_data);
 err_free_machine:
@@ -311,7 +333,7 @@ static int __init tegra_rt5631_modinit(void)
 	}
 
 	ret = platform_driver_register(&tegra_rt5631_driver);
-	audio_dock_init();	
+	audio_dock_init();
 
 	printk(KERN_INFO "%s- #####\n", __func__);
 	return ret;

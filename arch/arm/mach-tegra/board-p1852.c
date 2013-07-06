@@ -1,6 +1,4 @@
 /*
- * arch/arm/mach-tegra/board-p1852.c
- *
  * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -14,6 +12,8 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * arch/arm/mach-tegra/board-p1852.c
  *
  */
 
@@ -43,6 +43,7 @@
 #include <mach/irqs.h>
 #include <mach/pinmux.h>
 #include <mach/iomap.h>
+#include <mach/io_dpd.h>
 #include <mach/io.h>
 #include <mach/pci.h>
 #include <mach/audio.h>
@@ -51,7 +52,6 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <mach/usb_phy.h>
-#include <mach/tegra_fiq_debugger.h>
 #include <sound/wm8903.h>
 #include <mach/tsensor.h>
 #include "board.h"
@@ -96,7 +96,6 @@ static __initdata struct tegra_clk_init_table p1852_clk_init_table[] = {
 	{ "vi",			"pll_p",	470000000,	false},
 	{ "vi_sensor",		"pll_p",	150000000,	false},
 	{ "vde",		"pll_c",	484000000,	true},
-	{ "host1x",		"pll_c",	242000000,	true},
 	{ "mpe",		"pll_c",	484000000,	true},
 	{ "se",			"pll_m",	625000000,	true},
 	{ "i2c1",		"pll_p",	3200000,	true},
@@ -198,7 +197,6 @@ static void __init p1852_uart_init(void)
 	platform_add_devices(p1852_uart_devices,
 				ARRAY_SIZE(p1852_uart_devices));
 }
-
 #if defined(CONFIG_TEGRA_P1852_TDM)
 static struct tegra_p1852_platform_data p1852_audio_tdm_pdata = {
 	.codec_info[0] = {
@@ -208,11 +206,15 @@ static struct tegra_p1852_platform_data p1852_audio_tdm_pdata = {
 		.name = "tegra-i2s-1",
 		.pcm_driver = "tegra-tdm-pcm-audio",
 		.i2s_format = format_tdm,
+		/* Defines whether the Codec Chip is Master or Slave */
 		.master = 1,
-		.num_slots = 4,
+		/* Defines the number of TDM slots */
+		.num_slots = 8,
+		/* Defines the width of each slot */
 		.slot_width = 32,
-		.tx_mask = 0x0f,
-		.rx_mask = 0x0f,
+		/* Defines which slots are enabled */
+		.tx_mask = 0xff,
+		.rx_mask = 0xff,
 	},
 	.codec_info[1] = {
 		.codec_dai_name = "dit-hifi",
@@ -237,6 +239,7 @@ static struct tegra_p1852_platform_data p1852_audio_i2s_pdata = {
 		.name = "tegra-i2s-1",
 		.pcm_driver = "tegra-pcm-audio",
 		.i2s_format = format_i2s,
+		/* Defines whether the Audio codec chip is master or slave */
 		.master = 1,
 	},
 	.codec_info[1] = {
@@ -246,6 +249,7 @@ static struct tegra_p1852_platform_data p1852_audio_i2s_pdata = {
 		.name = "tegra-i2s-2",
 		.pcm_driver = "tegra-pcm-audio",
 		.i2s_format = format_i2s,
+		/* Defines whether the Audio codec chip is master or slave */
 		.master = 0,
 	},
 };
@@ -273,6 +277,8 @@ static struct platform_device tegra_snd_p1852 = {
 
 static void p1852_i2s_audio_init(void)
 {
+	struct tegra_p1852_platform_data *pdata;
+
 	platform_device_register(&tegra_pcm_device);
 	platform_device_register(&tegra_tdm_pcm_device);
 	platform_device_register(&generic_codec_1);
@@ -281,6 +287,11 @@ static void p1852_i2s_audio_init(void)
 	platform_device_register(&tegra_i2s_device4);
 	platform_device_register(&tegra_ahub_device);
 	platform_device_register(&tegra_snd_p1852);
+
+	/* Change pinmux of I2S4 for master mode */
+	pdata = tegra_snd_p1852.dev.platform_data;
+	if (!pdata->codec_info[1].master)
+		p1852_pinmux_set_i2s4_master();
 }
 
 
@@ -445,9 +456,6 @@ static __initdata struct tegra_clk_init_table spi_clk_init_table[] = {
 
 static int __init p1852_touch_init(void)
 {
-	tegra_gpio_enable(TOUCH_GPIO_IRQ_ATMEL_T9);
-	tegra_gpio_enable(TOUCH_GPIO_RST_ATMEL_T9);
-
 	gpio_request(TOUCH_GPIO_IRQ_ATMEL_T9, "atmel-irq");
 	gpio_direction_input(TOUCH_GPIO_IRQ_ATMEL_T9);
 
@@ -467,6 +475,32 @@ static int __init p1852_touch_init(void)
 
 #endif // CONFIG_TOUCHSCREEN_ATMEL_MXT
 
+#if defined(CONFIG_USB_G_ANDROID)
+static struct tegra_usb_platform_data tegra_udc_pdata = {
+	.port_otg = false,
+	.has_hostpc = true,
+	.phy_intf = TEGRA_USB_PHY_INTF_UTMI,
+	.op_mode = TEGRA_USB_OPMODE_DEVICE,
+	.u_data.dev = {
+		.vbus_pmu_irq = 0,
+		.vbus_gpio = -1,
+		.charging_supported = false,
+		.remote_wakeup_supported = false,
+	},
+	.u_cfg.utmi = {
+		.hssync_start_delay = 0,
+		.idle_wait_delay = 17,
+		.elastic_limit = 16,
+		.term_range_adj = 6,
+		.xcvr_setup = 63,
+		.xcvr_setup_offset = 6,
+		.xcvr_use_fuses = 1,
+		.xcvr_lsfslew = 2,
+		.xcvr_lsrslew = 2,
+		.xcvr_use_lsb = 1,
+	},
+};
+#else
 static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 	.port_otg = false,
 	.has_hostpc = true,
@@ -492,6 +526,7 @@ static struct tegra_usb_platform_data tegra_ehci1_utmi_pdata = {
 		.xcvr_use_lsb = 1,
 	},
 };
+#endif
 
 static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
 	.port_otg = false,
@@ -547,9 +582,16 @@ static struct tegra_usb_platform_data tegra_ehci3_utmi_pdata = {
 
 static void p1852_usb_init(void)
 {
+	/* Need to parse sku info to decide host/device mode */
+
+	/* G_ANDROID require device mode */
+#if defined(CONFIG_USB_G_ANDROID)
+	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
+	platform_device_register(&tegra_udc_device);
+#else
 	tegra_ehci1_device.dev.platform_data = &tegra_ehci1_utmi_pdata;
 	platform_device_register(&tegra_ehci1_device);
-
+#endif
 	tegra_ehci2_device.dev.platform_data = &tegra_ehci2_utmi_pdata;
 	platform_device_register(&tegra_ehci2_device);
 
@@ -563,6 +605,10 @@ static struct tegra_nor_platform_data p1852_nor_data = {
 		.width = 2,
 	},
 	.chip_parms = {
+		.MuxMode = NorMuxMode_ADNonMux,
+		.ReadMode = NorReadMode_Page,
+		.PageLength = NorPageLength_8Word,
+		.ReadyActive = NorReadyActive_WithData,
 		/* FIXME: Need to use characterized value */
 		.timing_default = {
 			.timing0 = 0x30300263,
@@ -586,12 +632,14 @@ static void __init tegra_p1852_init(void)
 {
 	tegra_init_board_info();
 	tegra_clk_init_from_table(p1852_clk_init_table);
+	tegra_soc_device_init("p1852");
 	p1852_pinmux_init();
 	p1852_i2c_init();
 	p1852_i2s_audio_init();
 	p1852_gpio_init();
 	p1852_uart_init();
 	p1852_usb_init();
+	tegra_io_dpd_init();
 	p1852_sdhci_init();
 	p1852_spi_init();
 	platform_add_devices(p1852_devices, ARRAY_SIZE(p1852_devices));
@@ -601,16 +649,32 @@ static void __init tegra_p1852_init(void)
 	p1852_panel_init();
 	p1852_nor_init();
 	p1852_pcie_init();
-	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 }
 
 static void __init tegra_p1852_reserve(void)
 {
 #if defined(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM)
-	tegra_reserve(0, SZ_8M, 0);
+	tegra_reserve(0, SZ_8M, SZ_8M);
 #else
-	tegra_reserve(SZ_128M, SZ_8M, 0);
+	tegra_reserve(SZ_128M, SZ_8M, SZ_8M);
 #endif
+}
+
+int p1852_get_skuid()
+{
+	switch (system_rev) {
+	case TEGRA_P1852_SKU2_A00:
+	case TEGRA_P1852_SKU2_B00:
+		return 2;
+	case TEGRA_P1852_SKU5_A00:
+	case TEGRA_P1852_SKU5_B00:
+		return 5;
+	case TEGRA_P1852_SKU8_A00:
+	case TEGRA_P1852_SKU8_B00:
+		return 8;
+	default:
+		return -1;
+	}
 }
 
 MACHINE_START(P1852, "p1852")

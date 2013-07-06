@@ -6,7 +6,7 @@
  * Author:
  *	Erik Gilling <konkers@google.com>
  *
- * Copyright (c) 2011 NVIDIA Corporation.
+ * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -142,7 +142,7 @@ int tegra_gpio_get_bank_int_nr(int gpio)
 	return irq;
 }
 
-void tegra_gpio_enable(int gpio)
+static void tegra_gpio_enable(int gpio)
 {
 	if (gpio >= TEGRA_NR_GPIOS) {
 		pr_warn("%s : Invalid gpio ID - %d\n", __func__, gpio);
@@ -150,9 +150,8 @@ void tegra_gpio_enable(int gpio)
 	}
 	tegra_gpio_mask_write(GPIO_MSK_CNF(gpio), gpio, 1);
 }
-EXPORT_SYMBOL_GPL(tegra_gpio_enable);
 
-void tegra_gpio_disable(int gpio)
+static void tegra_gpio_disable(int gpio)
 {
 	if (gpio >= TEGRA_NR_GPIOS) {
 		pr_warn("%s : Invalid gpio ID - %d\n", __func__, gpio);
@@ -160,7 +159,6 @@ void tegra_gpio_disable(int gpio)
 	}
 	tegra_gpio_mask_write(GPIO_MSK_CNF(gpio), gpio, 0);
 }
-EXPORT_SYMBOL_GPL(tegra_gpio_disable);
 
 void tegra_gpio_init_configure(unsigned gpio, bool is_input, int value)
 {
@@ -314,6 +312,9 @@ static int tegra_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 
 	spin_unlock_irqrestore(&bank->lvl_lock[port], flags);
 
+	tegra_gpio_mask_write(GPIO_MSK_OE(gpio), gpio, 0);
+	tegra_gpio_enable(gpio);
+
 	if (type & (IRQ_TYPE_LEVEL_LOW | IRQ_TYPE_LEVEL_HIGH))
 		__irq_set_handler_locked(d->irq, handle_level_irq);
 	else if (type & (IRQ_TYPE_EDGE_FALLING | IRQ_TYPE_EDGE_RISING))
@@ -390,6 +391,9 @@ static int tegra_gpio_suspend(void)
 			bank->oe[p] = __raw_readl(GPIO_OE(gpio));
 			bank->int_enb[p] = __raw_readl(GPIO_INT_ENB(gpio));
 			bank->int_lvl[p] = __raw_readl(GPIO_INT_LVL(gpio));
+
+			/* disable gpio interrupts that are not wake sources */
+			__raw_writel(bank->wake_enb[p], GPIO_INT_ENB(gpio));
 		}
 	}
 	local_irq_restore(flags);

@@ -132,7 +132,6 @@ static int nct1008_get_temp(struct device *dev, long *etemp, long *itemp)
 		*etemp = temp_ext_milli;
 	}
 
-	//printk("%s: ret temp=%dC \n", __func__, *pTemp);
 	return 0;
 error:
 	dev_err(&client->dev, "\n error in file=: %s %s() line=%d: "
@@ -417,10 +416,9 @@ static void dump_reg(const char *reg_name, int offset)
 }
 void nct1008_read_stress_test(struct work_struct *work)
 {
-	long temperature=0;
-	nct1008_get_temp(&pnct1008_data->client->dev, &temperature, NULL);
-	//dump_reg("Status              ",  0x02);
-	//dump_reg("Configuration       ", 0x03);
+	long ext_temperature=0;
+	nct1008_get_temp(&pnct1008_data->client->dev, &ext_temperature, NULL);
+	printk("cpu ext_temperature=%ld\n", ext_temperature/1000);
        queue_delayed_work(nct1008_stress_work_queue, &pnct1008_data->stress_test, 5*HZ);
 	return ;
 }

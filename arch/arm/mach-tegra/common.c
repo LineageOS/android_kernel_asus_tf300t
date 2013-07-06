@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/common.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2010-2012 NVIDIA Corporation
+ * Copyright (C) 2010-2012, NVIDIA Corporation. All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@android.com>
@@ -29,11 +29,14 @@
 #include <linux/bitops.h>
 #include <linux/sched.h>
 #include <linux/cpufreq.h>
+#include <linux/of.h>
+#include <linux/sys_soc.h>
 
 #include <asm/hardware/cache-l2x0.h>
 #include <asm/system.h>
 
 #include <mach/gpio.h>
+#include <mach/hardware.h>
 #include <mach/iomap.h>
 #include <mach/pinmux.h>
 #include <mach/powergate.h>
@@ -217,6 +220,7 @@ static __initdata struct tegra_clk_init_table common_clk_init_table[] = {
 	{ "sbc5.sclk",	NULL,		40000000,	false},
 	{ "sbc6.sclk",	NULL,		40000000,	false},
 	{ "wake.sclk",	NULL,		40000000,	true },
+	{ "cpu_mode.sclk", NULL,	80000000,	false },
 	{ "cbus",	"pll_c",	416000000,	false },
 	{ "pll_c_out1",	"pll_c",	208000000,	false },
 	{ "mselect",	"pll_p",	102000000,	true },
@@ -224,61 +228,11 @@ static __initdata struct tegra_clk_init_table common_clk_init_table[] = {
 	{ NULL,		NULL,		0,		0},
 };
 
-#ifdef CONFIG_CACHE_L2X0
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
-static void tegra_cache_smc(bool enable, u32 arg)
+static inline void tegra_l2x0_disable_tz(void)
 {
-	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
-	bool need_affinity_switch;
-	bool can_switch_affinity;
-	bool l2x0_enabled;
-	cpumask_t local_cpu_mask;
-	cpumask_t saved_cpu_mask;
-	unsigned long flags;
-	long ret;
-
-	/*
-	 * ISSUE : Some registers of PL310 controler must be written
-	 *              from Secure context (and from CPU0)!
-	 *
-	 * When called form Normal we obtain an abort or do nothing.
-	 * Instructions that must be called in Secure:
-	 *      - Write to Control register (L2X0_CTRL==0x100)
-	 *      - Write in Auxiliary controler (L2X0_AUX_CTRL==0x104)
-	 *      - Invalidate all entries (L2X0_INV_WAY==0x77C),
-	 *              mandatory at boot time.
-	 *      - Tag and Data RAM Latency Control Registers
-	 *              (0x108 & 0x10C) must be written in Secure.
-	 */
-	need_affinity_switch = (smp_processor_id() != 0);
-	can_switch_affinity = !irqs_disabled();
-
-	WARN_ON(need_affinity_switch && !can_switch_affinity);
-	if (need_affinity_switch && can_switch_affinity) {
-		cpu_set(0, local_cpu_mask);
-		sched_getaffinity(0, &saved_cpu_mask);
-		ret = sched_setaffinity(0, &local_cpu_mask);
-		WARN_ON(ret != 0);
-	}
-
-	local_irq_save(flags);
-	l2x0_enabled = readl_relaxed(p + L2X0_CTRL) & 1;
-	if (enable && !l2x0_enabled)
-		tegra_generic_smc(0xFFFFF100, 0x00000001, arg);
-	else if (!enable && l2x0_enabled)
-		tegra_generic_smc(0xFFFFF100, 0x00000002, arg);
-	local_irq_restore(flags);
-
-	if (need_affinity_switch && can_switch_affinity) {
-		ret = sched_setaffinity(0, &saved_cpu_mask);
-		WARN_ON(ret != 0);
-	}
-}
-
-static void tegra_l2x0_disable(void)
-{
-	unsigned long flags;
 	static u32 l2x0_way_mask;
+	BUG_ON(smp_processor_id() != 0);
 
 	if (!l2x0_way_mask) {
 		void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
@@ -289,30 +243,75 @@ static void tegra_l2x0_disable(void)
 		ways = (aux_ctrl & (1 << 16)) ? 16 : 8;
 		l2x0_way_mask = (1 << ways) - 1;
 	}
-
-	local_irq_save(flags);
-	tegra_cache_smc(false, l2x0_way_mask);
-	local_irq_restore(flags);
+#ifdef CONFIG_ARCH_TEGRA_2x_SOC
+	/* flush all ways on any disable */
+	tegra_generic_smc_uncached(0xFFFFF100, 0x00000002, l2x0_way_mask);
+#elif defined(CONFIG_ARCH_TEGRA_3x_SOC)
+	if (tegra_is_cpu_in_lp2(0) == false) {
+		/*
+		 * If entering LP0/LP1, ask secureos to fully flush and
+		 * disable the L2.
+		 *
+		 * If entering LP2, L2 disable is handled by the secureos
+		 * as part of the tegra_sleep_cpu() SMC. This SMC indicates
+		 * no more secureos tasks will be scheduled, allowing it
+		 * to optimize out L2 flushes on its side.
+		 */
+		tegra_generic_smc_uncached(0xFFFFF100,
+						0x00000002, l2x0_way_mask);
+	}
+#endif
 }
-#endif	/* CONFIG_TRUSTED_FOUNDATIONS  */
 
-void tegra_init_cache(bool init)
+static inline void tegra_init_cache_tz(bool init)
 {
 	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
 	u32 aux_ctrl;
 
+	BUG_ON(smp_processor_id() != 0);
+
+	if (init) {
+		/* init L2 from secureos */
+		tegra_generic_smc(0xFFFFF100, 0x00000001, 0x0);
+
+		/* common init called for outer call hookup */
+		aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
+		l2x0_init(p, aux_ctrl, 0xFFFFFFFF);
+
+		/* use our outer_disable() routine */
+		outer_cache.disable = tegra_l2x0_disable_tz;
+	} else {
+		/* reenable L2 in secureos */
+		aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
+		tegra_generic_smc_uncached(0xFFFFF100, 0x00000004, aux_ctrl);
+	}
+}
+#endif	/* CONFIG_TRUSTED_FOUNDATIONS  */
+
+#ifdef CONFIG_CACHE_L2X0
+/*
+ * We define our own outer_disable() to avoid L2 flush upon LP2 entry.
+ * Since the Tegra kernel will always be in single core mode when
+ * L2 is being disabled, we can omit the locking. Since we are not
+ * accessing the spinlock we also avoid the problem of the spinlock
+ * storage getting out of sync.
+ */
+static inline void tegra_l2x0_disable(void)
+{
+	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
+	writel_relaxed(0, p + L2X0_CTRL);
+	dsb();
+}
+
+void tegra_init_cache(bool init)
+{
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
-	/* issue the SMC to enable the L2 */
-	aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
-	tegra_cache_smc(true, aux_ctrl);
-
-	/* after init, reread aux_ctrl and register handlers */
-	aux_ctrl = readl_relaxed(p + L2X0_AUX_CTRL);
-	l2x0_init(p, aux_ctrl, 0xFFFFFFFF);
-
-	/* override outer_disable() with our disable */
-	outer_cache.disable = tegra_l2x0_disable;
+	/* enable/re-enable of L2 handled by secureos */
+	return tegra_init_cache_tz(init);
 #else
+	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
+	u32 aux_ctrl;
+
 #if defined(CONFIG_ARCH_TEGRA_2x_SOC)
 	writel_relaxed(0x331, p + L2X0_TAG_LATENCY_CTRL);
 	writel_relaxed(0x441, p + L2X0_DATA_LATENCY_CTRL);
@@ -350,6 +349,8 @@ void tegra_init_cache(bool init)
 	aux_ctrl |= 0x7C000001;
 	if (init) {
 		l2x0_init(p, aux_ctrl, 0x8200c3fe);
+		/* use our outer_disable() routine to avoid flush */
+		outer_cache.disable = tegra_l2x0_disable;
 	} else {
 		u32 tmp;
 
@@ -362,7 +363,7 @@ void tegra_init_cache(bool init)
 	l2x0_enable();
 #endif
 }
-#endif
+#endif /* CONFIG_CACHE_L2X0 */
 
 static void __init tegra_init_power(void)
 {
@@ -637,11 +638,54 @@ __setup("audio_codec=", tegra_audio_codec_type);
 
 void tegra_get_board_info(struct board_info *bi)
 {
-	bi->board_id = (system_serial_high >> 16) & 0xFFFF;
-	bi->sku = (system_serial_high) & 0xFFFF;
-	bi->fab = (system_serial_low >> 24) & 0xFF;
-	bi->major_revision = (system_serial_low >> 16) & 0xFF;
-	bi->minor_revision = (system_serial_low >> 8) & 0xFF;
+#ifdef CONFIG_OF
+	struct device_node *board_info;
+	u32 prop_val;
+	int err;
+
+	board_info = of_find_node_by_path("/chosen/board_info");
+	if (!IS_ERR_OR_NULL(board_info)) {
+		memset(bi, 0, sizeof(*bi));
+
+		err = of_property_read_u32(board_info, "id", &prop_val);
+		if (err)
+			pr_err("failed to read /chosen/board_info/id\n");
+		else
+			bi->board_id = prop_val;
+
+		err = of_property_read_u32(board_info, "sku", &prop_val);
+		if (err)
+			pr_err("failed to read /chosen/board_info/sku\n");
+		else
+			bi->sku = prop_val;
+
+		err = of_property_read_u32(board_info, "fab", &prop_val);
+		if (err)
+			pr_err("failed to read /chosen/board_info/fab\n");
+		else
+			bi->fab = prop_val;
+
+		err = of_property_read_u32(board_info, "major_revision", &prop_val);
+		if (err)
+			pr_err("failed to read /chosen/board_info/major_revision\n");
+		else
+			bi->major_revision = prop_val;
+
+		err = of_property_read_u32(board_info, "minor_revision", &prop_val);
+		if (err)
+			pr_err("failed to read /chosen/board_info/minor_revision\n");
+		else
+			bi->minor_revision = prop_val;
+	} else {
+#endif
+		bi->board_id = (system_serial_high >> 16) & 0xFFFF;
+		bi->sku = (system_serial_high) & 0xFFFF;
+		bi->fab = (system_serial_low >> 24) & 0xFF;
+		bi->major_revision = (system_serial_low >> 16) & 0xFF;
+		bi->minor_revision = (system_serial_low >> 8) & 0xFF;
+#ifdef CONFIG_OF
+	}
+#endif
 }
 
 static int __init tegra_pmu_board_info(char *info)
@@ -960,26 +1004,14 @@ char *cpufreq_conservative_gov = "conservative";
 void cpufreq_store_default_gov(void)
 {
 	unsigned int cpu = 0;
-	struct cpufreq_policy *policy;
 
 #ifndef CONFIG_TEGRA_AUTO_HOTPLUG
 	for_each_online_cpu(cpu)
 #endif
 	{
-		policy = cpufreq_cpu_get(cpu);
-		if (policy && policy->governor) {
-			sprintf(cpufreq_default_gov[cpu], "%s",
-					policy->governor->name);
-			cpufreq_cpu_put(policy);
-		} else {
-			/* No policy or no gov set for this
-			 * online cpu. If we are here, require
-			 * serious debugging hence setting
-			 * as pr_error.
-			 */
-			pr_err("No gov or No policy for online cpu:%d,"
-					, cpu);
-		}
+		if (cpufreq_current_gov(cpufreq_default_gov[cpu], cpu) < 0)
+			pr_info("Unable to fetch gov:%s for online cpu:%d\n"
+				, cpufreq_default_gov[cpu], cpu);
 	}
 }
 
@@ -997,7 +1029,7 @@ void cpufreq_change_gov(char *target_gov)
 			/* Unable to set gov for the online cpu.
 			 * If it happens, needs to debug.
 			 */
-			pr_info("Unable to set gov:%s for online cpu:%d,"
+			pr_info("Unable to set gov:%s for online cpu:%d"
 				, cpufreq_default_gov[cpu]
 					, cpu);
 	}
@@ -1020,7 +1052,7 @@ void cpufreq_restore_default_gov(void)
 				 * It was online on suspend and becomes
 				 * offline on resume.
 				 */
-				pr_info("Unable to restore gov:%s for cpu:%d,"
+				pr_info("Unable to restore gov:%s for cpu:%d"
 						, cpufreq_default_gov[cpu]
 							, cpu);
 		}
@@ -1028,3 +1060,62 @@ void cpufreq_restore_default_gov(void)
 	}
 }
 #endif /* CONFIG_TEGRA_CONVSERVATIVE_GOV_ON_EARLYSUPSEND */
+
+static const char * __init tegra_get_family(void)
+{
+	void __iomem *chip_id = IO_ADDRESS(TEGRA_APB_MISC_BASE) + 0x804;
+	u32 cid = readl(chip_id);
+	cid = (cid >> 8) & 0xFF;
+
+	switch (cid) {
+	case TEGRA_CHIPID_TEGRA2:
+		cid = 2;
+		break;
+	case TEGRA_CHIPID_TEGRA3:
+		cid = 3;
+		break;
+
+	case TEGRA_CHIPID_UNKNOWN:
+	default:
+		cid = 0;
+	}
+	return kasprintf(GFP_KERNEL, "Tegra%d", cid);
+}
+
+static const char * __init tegra_get_soc_id(void)
+{
+	int package_id = tegra_package_id();
+	return kasprintf(GFP_KERNEL, "REV=%s:SKU=0x%x:PID=0x%x",
+			tegra_get_revision_name(),
+			(unsigned int)  tegra_sku_id,
+			package_id);
+}
+
+static void __init tegra_soc_info_populate(struct soc_device_attribute
+	*soc_dev_attr, const char *machine)
+{
+	soc_dev_attr->soc_id = tegra_get_soc_id();
+	soc_dev_attr->machine  = machine;
+	soc_dev_attr->family   = tegra_get_family();
+	soc_dev_attr->revision = tegra_get_revision_name();
+}
+
+int __init tegra_soc_device_init(const char *machine)
+{
+	struct soc_device *soc_dev;
+	struct soc_device_attribute *soc_dev_attr;
+
+	soc_dev_attr = kzalloc(sizeof(*soc_dev_attr), GFP_KERNEL);
+	if (!soc_dev_attr)
+		return -ENOMEM;
+
+	tegra_soc_info_populate(soc_dev_attr, machine);
+
+	soc_dev = soc_device_register(soc_dev_attr);
+	if (IS_ERR_OR_NULL(soc_dev)) {
+		kfree(soc_dev_attr);
+		return -1;
+	}
+
+	return 0;
+}

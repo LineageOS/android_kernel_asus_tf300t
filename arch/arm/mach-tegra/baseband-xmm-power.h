@@ -42,6 +42,8 @@ struct baseband_power_platform_data {
 	enum baseband_type baseband_type;
 	struct platform_device* (*hsic_register)(void);
 	void (*hsic_unregister)(struct platform_device *);
+	struct platform_device* (*utmip_register)(void);
+	void (*utmip_unregister)(struct platform_device *);
 	union {
 		struct {
 			int mdm_reset;
@@ -55,10 +57,17 @@ struct baseband_power_platform_data {
 		struct {
 			int bb_rst;
 			int bb_on;
+			int bb_vbat;
+			int bb_rst_ind;
+			int bb_vbus;
+			int bb_sw_sel;
+			int bb_sim_cd;
+			int bb_sar_det;
 			int ipc_bb_wake;
 			int ipc_ap_wake;
 			int ipc_hsic_active;
 			int ipc_hsic_sus_req;
+			int ipc_bb_force_crash;
 			struct platform_device *hsic_device;
 		} xmm;
 	} modem;
@@ -105,6 +114,7 @@ enum baseband_xmm_powerstate_t {
 irqreturn_t xmm_power_ipc_ap_wake_irq(int irq, void *dev_id);
 
 void baseband_xmm_set_power_status(unsigned int status);
+int baseband_modem_crash_dump(int enable);
 extern struct xmm_power_data xmm_power_drv_data;
 
 #endif  /* BASREBAND_XMM_POWER_H */

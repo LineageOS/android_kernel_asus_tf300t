@@ -1084,25 +1084,25 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *rqc)
 		/*
 		 * SD Workaround: downgrade frequency for seldom specific sdcard
 		 */
-		if (disable_multi == 1) {
-			if (UHS_SDR104_MAX_DTR == card->host->ios.clock) {
-				MMC_printk("SD freq. down to UHS_SDR50_MAX_DTR");
-				mmc_set_clock(card->host, UHS_SDR50_MAX_DTR);
-			}
-			else if (UHS_SDR50_MAX_DTR == card->host->ios.clock) {
-				MMC_printk("SD freq. down to UHS_SDR25_MAX_DTR");
-				mmc_set_clock(card->host, UHS_SDR25_MAX_DTR);
-			}
-			else if (UHS_SDR25_MAX_DTR == card->host->ios.clock) {
-				MMC_printk("SD freq. down to UHS_SDR20_5_MAX_DTR");
-				mmc_set_clock(card->host, UHS_SDR20_5_MAX_DTR);
+                if (disable_multi == 1) {
+                        if (UHS_SDR104_MAX_DTR == card->host->ios.clock) {
+                                MMC_printk("SD freq. down to UHS_SDR50_MAX_DTR");
+                                mmc_set_clock(card->host, UHS_SDR50_MAX_DTR);
                         }
-			else if (UHS_SDR20_5_MAX_DTR == card->host->ios.clock) {
-				MMC_printk("SD freq. down to UHS_SDR12_MAX_DTR");
-				mmc_set_clock(card->host, UHS_SDR12_MAX_DTR);
-			}
-			disable_multi = 0;
-		}
+                        else if (UHS_SDR50_MAX_DTR == card->host->ios.clock) {
+                                MMC_printk("SD freq. down to UHS_SDR25_MAX_DTR");
+                                mmc_set_clock(card->host, UHS_SDR25_MAX_DTR);
+                        }
+                        else if (UHS_SDR25_MAX_DTR == card->host->ios.clock) {
+                                MMC_printk("SD freq. down to UHS_SDR20_5_MAX_DTR");
+                                mmc_set_clock(card->host, UHS_SDR20_5_MAX_DTR);
+                        }
+                        else if (UHS_SDR20_5_MAX_DTR == card->host->ios.clock) {
+                                MMC_printk("SD freq. down to UHS_SDR12_MAX_DTR");
+                                mmc_set_clock(card->host, UHS_SDR12_MAX_DTR);
+                        }
+                        disable_multi = 0;
+                }
 
 		switch (status) {
 		case MMC_BLK_SUCCESS:
@@ -1601,8 +1601,6 @@ static void mmc_blk_remove(struct mmc_card *card)
 	mmc_set_drvdata(card, NULL);
 #ifdef CONFIG_MMC_BLOCK_DEFERRED_RESUME
 	mmc_set_bus_resume_policy(card->host, 0);
-	card->host->bus_resume_flags &= ~MMC_BUSRESUME_NEEDS_RESUME;
-	MMC_printk("%s: bus_resume_flags 0x%x", mmc_hostname(card->host), card->host->bus_resume_flags);
 #endif
 }
 

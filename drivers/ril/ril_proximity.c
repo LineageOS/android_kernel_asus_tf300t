@@ -16,6 +16,8 @@
 
 //**** external symbols
 
+int proximity_enabled;
+spinlock_t proximity_irq_lock;
 
 //**** constants
 
@@ -24,16 +26,12 @@
 
 //**** local variable declaration
 
-static DEFINE_MUTEX(prox_enable_mtx);
-
 static struct device *dev;
 
 static struct workqueue_struct *workqueue;
 static struct work_struct prox_task;
 
 static struct switch_dev prox_sdev;
-
-static int proximity_enabled;
 
 //**** callbacks for switch device
 
@@ -53,22 +51,65 @@ static ssize_t print_prox_state(struct switch_dev *sdev, char *buf)
 	return sprintf(buf, "%d\n", state);
 }
 
+static void proximity_disable_irq(void)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&proximity_irq_lock, flags);
+	if (proximity_enabled) {
+		disable_irq_nosync(gpio_to_irq(SAR_DET_3G));
+		proximity_enabled = 0;
+	}
+	spin_unlock_irqrestore(&proximity_irq_lock, flags);
+}
+
+static void proximity_enable_irq(int value)
+{
+	int check_value;
+	unsigned long flags;
+
+	spin_lock_irqsave(&proximity_irq_lock, flags);
+	if (!proximity_enabled) {
+		enable_irq(gpio_to_irq(SAR_DET_3G));
+		proximity_enabled = 1;
+	}
+	spin_unlock_irqrestore(&proximity_irq_lock, flags);
+
+	/* check if the state of gpio is correct */
+	check_value = gpio_get_value(SAR_DET_3G);
+	if (value != check_value) {
+		RIL_INFO("re-notify RIL with state %d\n", check_value);
+		if (!check_value)
+			switch_set_state(&prox_sdev, 1);
+		else
+			switch_set_state(&prox_sdev, 0);
+	}
+}
 
 //**** IRQ event handler
-
-static void ril_proximity_work_handle(struct work_struct *work)
+int check_sar_det_3g()
 {
-	int value;
+	int value = gpio_get_value(SAR_DET_3G);
 
-	value = gpio_get_value(SAR_DET_3G);
+	RIL_INFO("SAR_DET_3G: %d\n", value);
+
 	if (!value)
 		switch_set_state(&prox_sdev, 1);
 	else
 		switch_set_state(&prox_sdev, 0);
+
+	return value;
+}
+
+static void ril_proximity_work_handle(struct work_struct *work)
+{
+	int value = check_sar_det_3g();
+	proximity_enable_irq(value);
 }
 
 irqreturn_t ril_proximity_interrupt_handle(int irq, void *dev_id)
 {
+	proximity_disable_irq();
 	queue_work(workqueue, &prox_task);
 
 	return IRQ_HANDLED;
@@ -97,18 +138,12 @@ static ssize_t store_prox_enabled(struct device *class, struct device_attribute 
 
 	/* when enabled, report the current status immediately.
 	   when disabled, set state to 0 to sync with RIL */
-	mutex_lock(&prox_enable_mtx);
-	if (enable != proximity_enabled) {
-		if (enable) {
-			enable_irq(gpio_to_irq(SAR_DET_3G));
-			queue_work(workqueue, &prox_task);
-		} else {
-			disable_irq(gpio_to_irq(SAR_DET_3G));
-			switch_set_state(&prox_sdev, 0);
-		}
-		proximity_enabled = enable;
+	if (enable) {
+		queue_work(workqueue, &prox_task);
+	} else {
+		proximity_disable_irq();
+		switch_set_state(&prox_sdev, 0);
 	}
-	mutex_unlock(&prox_enable_mtx);
 
 	return strnlen(buf, count);
 }

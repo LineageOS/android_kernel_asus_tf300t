@@ -1245,7 +1245,7 @@ static ssize_t dbg_set_mi1040_reg_write(struct file *file, char __user *buf, siz
 	char debug_buf[256];
 	int cnt, byte_num;
 	char ofst_str[7], reg_val_str[11];
-	unsigned int ofst = 0, reg_val= 0;
+	unsigned int ofst, reg_val= 0;
 
 	printk("%s: buf=%p, count=%d, ppos=%p\n", __FUNCTION__, buf, count, ppos);
 	if (count > sizeof(debug_buf))
@@ -1255,7 +1255,7 @@ static ssize_t dbg_set_mi1040_reg_write(struct file *file, char __user *buf, siz
 	debug_buf[count] = '\0';	/* end of string */
 	cnt = sscanf(debug_buf, "%s %s %d", ofst_str, reg_val_str, &byte_num);
 
-	printk("adogu: cnt= %d; ofst_str=\"%s\"; reg_val_str=\"%s\"; byte_num= %d\n", cnt, ofst_str, reg_val_str, byte_num);
+	//printk("cnt= %d; ofst_str=\"%s\"; reg_val_str=\"%s\"; byte_num= %d\n", cnt, ofst_str, reg_val_str, byte_num);
 
 	if (sensor_opened == false) {
 			printk("%s: Please open mi1040 first.\n", __FUNCTION__);
@@ -1283,7 +1283,7 @@ static ssize_t dbg_set_mi1040_reg_write(struct file *file, char __user *buf, siz
 
 			/* Parse Reg Value */
 			for (i = 2; i < 11; i++) {
-				// printk("adogu: i =%d\n", i);
+				// printk("i =%d\n", i);
 
 				if ((reg_val_str[i] >= '0') && (reg_val_str[i] <= '9'))
 					reg_val = reg_val * 16 + reg_val_str[i] - '0';
@@ -1409,7 +1409,7 @@ static long sensor_ioctl(struct file *file,
 	}
 	case SENSOR_IOCTL_SET_COLOR_EFFECT:
 	{
-		u8 coloreffect;
+		u16 coloreffect;
 
 		if (copy_from_user(&coloreffect,(const void __user *)arg,
 			sizeof(coloreffect))) {
@@ -1671,18 +1671,19 @@ static long sensor_ioctl(struct file *file,
 
 static int sensor_open(struct inode *inode, struct file *file)
 {
-	int ret = -EIO;
+	int ret;
 
 	pr_info("yuv %s\n",__func__);
-
 	file->private_data = info;
-
 	if (info->pdata && info->pdata->power_on)
 		ret = info->pdata->power_on();
-
-	sensor_opened = !ret;
-
-	return ret;
+	if (ret == 0)
+		sensor_opened = true;
+	else{
+		sensor_opened = false;
+		return -EBUSY;
+	}
+	return 0;
 }
 
 int mi1040_sensor_release(struct inode *inode, struct file *file)

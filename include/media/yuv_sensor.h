@@ -31,7 +31,7 @@
 
 #define SENSOR_IOCTL_SET_MODE           _IOW('o', 1, struct sensor_mode)
 #define SENSOR_IOCTL_GET_STATUS         _IOR('o', 2, __u8)
-#define SENSOR_IOCTL_SET_COLOR_EFFECT   _IOW('o', 3, __u8)
+#define SENSOR_IOCTL_SET_COLOR_EFFECT   _IOW('o', 3, __u16)
 #define SENSOR_IOCTL_SET_WHITE_BALANCE  _IOW('o', 4, __u8)
 #define SENSOR_IOCTL_SET_SCENE_MODE     _IOW('o', 5, __u8)
 #define SENSOR_IOCTL_SET_AF_MODE        _IOW('o', 6, __u8)
@@ -80,6 +80,9 @@ enum {
     ASUS_CUSTOM_IOCTL_SET_AF_CONTROL,
     ASUS_CUSTOM_IOCTL_SET_TOUCH_AE,
     ASUS_CUSTOM_IOCTL_SET_ICATCH_AE_WINDOW,
+    ASUS_CUSTOM_IOCTL_SET_AURA,
+    ASUS_CUSTOM_IOCTL_FETCH_EXIF,
+    ASUS_CUSTOM_IOCTL_GET_CAF_STATE,
 };
 
 enum {
@@ -195,6 +198,9 @@ typedef enum {
 #define SENSOR_CUSTOM_IOCTL_SET_AF_CONTROL _IOW('o', ASUS_CUSTOM_IOCTL_SET_AF_CONTROL, __s16)
 #define SENSOR_CUSTOM_IOCTL_SET_TOUCH_AE      _IOWR('o', ASUS_CUSTOM_IOCTL_SET_TOUCH_AE, custom_ae_win_cmd_package)
 #define SENSOR_CUSTOM_IOCTL_SET_ICATCH_AE_WINDOW     _IOW('o', ASUS_CUSTOM_IOCTL_SET_ICATCH_AE_WINDOW, custom_ae_win_cmd_package)
+#define SENSOR_CUSTOM_IOCTL_FETCH_EXIF  _IOW('o', ASUS_CUSTOM_IOCTL_FETCH_EXIF, __u16)
+#define SENSOR_CUSTOM_IOCTL_SET_AURA          _IOW('o', ASUS_CUSTOM_IOCTL_SET_AURA, __u16)
+#define SENSOR_CUSTOM_IOCTL_GET_CAF_STATE     _IOR('o', ASUS_CUSTOM_IOCTL_GET_CAF_STATE, __u16)
 
 enum {
     YUV_ColorEffect = 0,
@@ -204,7 +210,7 @@ enum {
 };
 
 enum {
-    YUV_ColorEffect_Invalid = 0,
+    YUV_ColorEffect_Invalid = 0xA000,
     YUV_ColorEffect_Aqua,
     YUV_ColorEffect_Blackboard,
     YUV_ColorEffect_Mono,
@@ -215,7 +221,15 @@ enum {
     YUV_ColorEffect_Solarize,
     YUV_ColorEffect_Whiteboard,
     YUV_ColorEffect_Vivid,
-    YUV_ColorEffect_WaterColor
+    YUV_ColorEffect_WaterColor,
+    YUV_ColorEffect_Vintage,
+    YUV_ColorEffect_Vintage2,
+    YUV_ColorEffect_Lomo,
+    YUV_ColorEffect_Red,
+    YUV_ColorEffect_Blue,
+    YUV_ColorEffect_Yellow,
+    YUV_ColorEffect_Aura,
+    YUV_ColorEffect_Max
 };
 
 enum {

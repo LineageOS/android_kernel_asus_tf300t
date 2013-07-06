@@ -29,8 +29,6 @@
 
 #include "sdhci.h"
 
-#include "../debug_mmc.h"
-
 #define DRIVER_NAME "sdhci"
 
 #define DBG(f, x...) \
@@ -1852,18 +1850,13 @@ int sdhci_enable(struct mmc_host *mmc)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
 
-	if (!mmc->card)
+	if (!mmc->card || mmc->card->type == MMC_TYPE_SDIO)
 		return 0;
 
 	if (mmc->ios.clock) {
-		if (mmc->card->type != MMC_TYPE_SDIO) {
-			if (host->ops->set_clock)
-				host->ops->set_clock(host, mmc->ios.clock);
-			sdhci_set_clock(host, mmc->ios.clock);
-		} else {
-			if (host->ops->set_card_clock)
-				host->ops->set_card_clock(host, mmc->ios.clock);
-		}
+		if (host->ops->set_clock)
+			host->ops->set_clock(host, mmc->ios.clock);
+		sdhci_set_clock(host, mmc->ios.clock);
 	}
 
 	return 0;
@@ -1873,18 +1866,12 @@ int sdhci_disable(struct mmc_host *mmc, int lazy)
 {
 	struct sdhci_host *host = mmc_priv(mmc);
 
-	if (!mmc->card)
+	if (!mmc->card || mmc->card->type == MMC_TYPE_SDIO)
 		return 0;
 
-	/* For SDIO cards, only disable the card clock. */
-	if (mmc->card->type != MMC_TYPE_SDIO) {
-		sdhci_set_clock(host, 0);
-		if (host->ops->set_clock)
-			host->ops->set_clock(host, 0);
-	} else {
-		if (host->ops->set_card_clock)
-			host->ops->set_card_clock(host, 0);
-	}
+	sdhci_set_clock(host, 0);
+	if (host->ops->set_clock)
+		host->ops->set_clock(host, 0);
 
 	return 0;
 }
@@ -2245,7 +2232,6 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		mmc_hostname(host->mmc), intmask);
 
 	if (intmask & (SDHCI_INT_CARD_INSERT | SDHCI_INT_CARD_REMOVE)) {
-		MMC_printk("%s: intmask 0x%08x SDHCI_INT_STATUS 0x%08x", mmc_hostname(host->mmc), intmask, sdhci_readl(host, SDHCI_INT_STATUS));
 		u32 present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
 			      SDHCI_CARD_PRESENT;
 
@@ -2267,6 +2253,11 @@ static irqreturn_t sdhci_irq(int irq, void *dev_id)
 		sdhci_writel(host, intmask & (SDHCI_INT_CARD_INSERT |
 			     SDHCI_INT_CARD_REMOVE), SDHCI_INT_STATUS);
 		intmask &= ~(SDHCI_INT_CARD_INSERT | SDHCI_INT_CARD_REMOVE);
+
+		/*
+		 * Bypass redundant sdhci register detection.
+		 * SD init works only when carddetect pin is varied.
+		 */
 		if (strcmp(mmc_hostname(host->mmc), "mmc2"))
 			tasklet_schedule(&host->card_tasklet);
 	}
@@ -2369,24 +2360,11 @@ int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 
 	sdhci_mask_irqs(host, SDHCI_INT_ALL_MASK);
 
-	if (host->vmmc) {
+	if (host->vmmc)
 		ret = regulator_disable(host->vmmc);
-		if (ret)
-			pr_err("%s: failed to disable regulator\n", __func__);
-	}
 
 	if (host->irq)
 		disable_irq(host->irq);
-
-	return 0;
-
-err_suspend_host:
-	/* Set the re-tuning expiration flag */
-	if ((host->version >= SDHCI_SPEC_300) && host->tuning_count &&
-	    (host->tuning_mode == SDHCI_TUNING_MODE_1))
-		host->flags |= SDHCI_NEEDS_RETUNING;
-
-	sdhci_enable_card_detection(host);
 
 	return ret;
 }

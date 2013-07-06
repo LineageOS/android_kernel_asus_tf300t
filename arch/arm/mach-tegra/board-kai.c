@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-kai.c
  *
- * Copyright (c) 2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -50,13 +50,13 @@
 #include <mach/pinmux.h>
 #include <mach/iomap.h>
 #include <mach/io.h>
+#include <mach/io_dpd.h>
 #include <mach/i2s.h>
-#include <mach/tegra_rt5640_pdata.h>
+#include <mach/tegra_asoc_pdata.h>
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <mach/usb_phy.h>
 #include <mach/thermal.h>
-#include <mach/tegra_fiq_debugger.h>
 
 #include "board.h"
 #include "clock.h"
@@ -68,35 +68,61 @@
 #include "pm.h"
 #include "wdt-recovery.h"
 
+#ifdef CONFIG_TEGRA_THERMAL_THROTTLE
+static struct throttle_table throttle_freqs_tj[] = {
+	      /*    CPU,    CBUS,    SCLK,     EMC */
+	      { 1000000,  NO_CAP,  NO_CAP,  NO_CAP },
+	      {  760000,  NO_CAP,  NO_CAP,  NO_CAP },
+	      {  760000,  NO_CAP,  NO_CAP,  NO_CAP },
+	      {  620000,  NO_CAP,  NO_CAP,  NO_CAP },
+	      {  620000,  NO_CAP,  NO_CAP,  NO_CAP },
+	      {  620000,  437000,  NO_CAP,  NO_CAP },
+	      {  620000,  352000,  NO_CAP,  NO_CAP },
+	      {  475000,  352000,  NO_CAP,  NO_CAP },
+	      {  475000,  352000,  NO_CAP,  NO_CAP },
+	      {  475000,  352000,  250000,  375000 },
+	      {  475000,  352000,  250000,  375000 },
+	      {  475000,  247000,  204000,  375000 },
+	      {  475000,  247000,  204000,  204000 },
+	      {  475000,  247000,  204000,  204000 },
+	{ CPU_THROT_LOW,  247000,  204000,  102000 },
+};
+#endif
+
+#ifdef CONFIG_TEGRA_SKIN_THROTTLE
+static struct throttle_table throttle_freqs_tskin[] = {
+	      /*    CPU,    CBUS,    SCLK,     EMC */
+	      { 1000000,  NO_CAP,  NO_CAP,  NO_CAP },
+	      {  760000,  NO_CAP,  NO_CAP,  NO_CAP },
+	      {  760000,  NO_CAP,  NO_CAP,  NO_CAP },
+	      {  620000,  NO_CAP,  NO_CAP,  NO_CAP },
+	      {  620000,  NO_CAP,  NO_CAP,  NO_CAP },
+	      {  620000,  437000,  NO_CAP,  NO_CAP },
+	      {  620000,  352000,  NO_CAP,  NO_CAP },
+	      {  475000,  352000,  NO_CAP,  NO_CAP },
+	      {  475000,  352000,  NO_CAP,  NO_CAP },
+	      {  475000,  352000,  250000,  375000 },
+	      {  475000,  352000,  250000,  375000 },
+	      {  475000,  247000,  204000,  375000 },
+	      {  475000,  247000,  204000,  204000 },
+	      {  475000,  247000,  204000,  204000 },
+	{ CPU_THROT_LOW,  247000,  204000,  102000 },
+};
+#endif
+
 static struct balanced_throttle throttle_list[] = {
+#ifdef CONFIG_TEGRA_THERMAL_THROTTLE
 	{
 		.id = BALANCED_THROTTLE_ID_TJ,
-		.throt_tab_size = 10,
-		.throt_tab = {
-			{      0, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 640000, 1000 },
-			{ 760000, 1000 },
-			{ 760000, 1050 },
-			{1000000, 1050 },
-			{1000000, 1100 },
-		},
+		.throt_tab_size = ARRAY_SIZE(throttle_freqs_tj),
+		.throt_tab = throttle_freqs_tj,
 	},
+#endif
 #ifdef CONFIG_TEGRA_SKIN_THROTTLE
 	{
 		.id = BALANCED_THROTTLE_ID_SKIN,
-		.throt_tab_size = 6,
-		.throt_tab = {
-			{ 640000, 1200 },
-			{ 640000, 1200 },
-			{ 760000, 1200 },
-			{ 760000, 1200 },
-			{1000000, 1200 },
-			{1000000, 1200 },
-		},
+		.throt_tab_size = ARRAY_SIZE(throttle_freqs_tskin),
+		.throt_tab = throttle_freqs_tskin,
 	},
 #endif
 };
@@ -574,12 +600,25 @@ static struct platform_device tegra_rtc_device = {
 	.num_resources = ARRAY_SIZE(tegra_rtc_resources),
 };
 
-static struct tegra_rt5640_platform_data kai_audio_pdata = {
+static struct tegra_asoc_platform_data kai_audio_pdata = {
 	.gpio_spkr_en		= TEGRA_GPIO_SPKR_EN,
 	.gpio_hp_det		= TEGRA_GPIO_HP_DET,
 	.gpio_hp_mute		= -1,
 	.gpio_int_mic_en	= TEGRA_GPIO_INT_MIC_EN,
 	.gpio_ext_mic_en	= TEGRA_GPIO_EXT_MIC_EN,
+		.i2s_param[HIFI_CODEC]	= {
+		.audio_port_id	= 0,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_I2S,
+	},
+	.i2s_param[BASEBAND]	= {
+		.audio_port_id	= -1,
+	},
+	.i2s_param[BT_SCO]	= {
+		.audio_port_id	= 3,
+		.is_i2s_master	= 1,
+		.i2s_mode	= TEGRA_DAIFMT_DSP_A,
+	},
 };
 
 static struct platform_device kai_audio_device = {
@@ -768,7 +807,7 @@ static struct tegra_usb_platform_data tegra_ehci2_utmi_pdata = {
 	.u_data.host = {
 		.vbus_gpio = -1,
 		.vbus_reg = NULL,
-		.hot_plug = false,
+		.hot_plug = true,
 		.remote_wakeup_supported = true,
 		.power_off_on_suspend = true,
 
@@ -799,14 +838,18 @@ static void kai_usb_init(void)
 
 	/* Setup the udc platform data */
 	tegra_udc_device.dev.platform_data = &tegra_udc_pdata;
-
-	tegra_ehci2_device.dev.platform_data = &tegra_ehci2_utmi_pdata;
-	platform_device_register(&tegra_ehci2_device);
 }
 
 static void kai_modem_init(void)
 {
 	int ret;
+	int modem_id = tegra_get_modem_id();
+
+	if (modem_id == TEGRA_BB_TANGO) {
+		tegra_ehci2_device.dev.platform_data = &tegra_ehci2_utmi_pdata;
+		platform_device_register(&tegra_ehci2_device);
+	}
+
 
 	ret = gpio_request(TEGRA_GPIO_W_DISABLE, "w_disable_gpio");
 	if (ret < 0)
@@ -859,6 +902,7 @@ static void __init tegra_kai_init(void)
 				throttle_list,
 				ARRAY_SIZE(throttle_list));
 	tegra_clk_init_from_table(kai_clk_init_table);
+	tegra_soc_device_init("kai");
 	kai_pinmux_init();
 	kai_i2c_init();
 	kai_spi_init();
@@ -870,6 +914,7 @@ static void __init tegra_kai_init(void)
 	kai_audio_init();
 	platform_add_devices(kai_devices, ARRAY_SIZE(kai_devices));
 	tegra_ram_console_debug_init();
+	tegra_io_dpd_init();
 	kai_sdhci_init();
 	kai_regulator_init();
 	kai_suspend_init();
@@ -886,7 +931,6 @@ static void __init tegra_kai_init(void)
 #ifdef CONFIG_TEGRA_WDT_RECOVERY
 	tegra_wdt_recovery_init();
 #endif
-	tegra_serial_debug_init(TEGRA_UARTD_BASE, INT_WDT_CPU, NULL, -1, -1);
 }
 
 static void __init kai_ramconsole_reserve(unsigned long size)

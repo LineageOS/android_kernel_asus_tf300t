@@ -769,7 +769,7 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
 		create_mapping(io_desc + i);
 }
 
-static void * __initdata vmalloc_min = (void *)(VMALLOC_END - SZ_128M);
+static void * __initdata vmalloc_min = (void *)(VMALLOC_END - SZ_768M);
 
 /*
  * vmalloc=size forces the vmalloc area to be exactly 'size'
@@ -942,7 +942,7 @@ void __init arm_mm_memblock_reserve(void)
 	 */
 	memblock_reserve(__pa(swapper_pg_dir), PTRS_PER_PGD * sizeof(pgd_t));
 
-#ifdef CONFIG_SA1111
+#if defined(CONFIG_SA1111) || defined(CONFIG_CPA)
 	/*
 	 * Because of the SA1111 DMA bug, we want to preserve our
 	 * precious DMA-able memory...
