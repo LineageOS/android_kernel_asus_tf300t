@@ -1144,7 +1144,7 @@ static int utmi_phy_open(struct tegra_usb_phy *phy)
 	}
 
 	if(phy->inst == 1 && tegra3_get_project_id() == TEGRA3_PROJECT_P1801) {
-		phy->utmi_xcvr_setup = phy->utmi_xcvr_setup + 6;
+		phy->utmi_xcvr_setup = phy->utmi_xcvr_setup + 9;
 		if(phy->utmi_xcvr_setup > 63)
 			phy->utmi_xcvr_setup = 63;
 		pr_info("phy->inst = %d, phy->utmi_xcvr_setup = %d\n", phy->inst, phy->utmi_xcvr_setup);

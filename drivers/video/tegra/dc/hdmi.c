@@ -1684,6 +1684,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		goto err_put_clock;
 	}
 #endif
+	// remove mode filter for P1801.
+	if (tegra3_get_project_id() == TEGRA3_PROJECT_P1801) {
+		tegra_dc_hdmi_ops.mode_filter = NULL;
+	}
 
 	/* TODO: support non-hotplug */
 	if (request_irq(gpio_to_irq(dc->out->hotplug_gpio), tegra_dc_hdmi_irq,

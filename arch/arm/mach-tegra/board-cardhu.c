@@ -81,6 +81,8 @@
 #include "baseband-xmm-power.h"
 #include "wdt-recovery.h"
 
+#define CODEC_RT5642_RESET	TEGRA_GPIO_PP2
+
 #ifdef CONFIG_TEGRA_THERMAL_THROTTLE
 static struct throttle_table throttle_freqs_tj[] = {
 	      /*    CPU,    CBUS,    SCLK,     EMC */
@@ -1702,6 +1704,19 @@ static void cardhu_usb_init(void)
 static void cardhu_usb_init(void) { }
 #endif
 
+static void cardhu_audio_init(void)
+{
+	struct board_info board_info;
+
+	unsigned int project_id = tegra3_get_project_id();
+
+	if (project_id == TEGRA3_PROJECT_ME301T) {
+		/* Set codec rt5642 in normal mode */
+		gpio_request(CODEC_RT5642_RESET, "codec_rt5642_reset");
+		gpio_direction_output(CODEC_RT5642_RESET, 1);
+	}
+}
+
 static struct baseband_power_platform_data tegra_baseband_power_data = {
 	.baseband_type = BASEBAND_XMM,
 	.modem = {
@@ -1902,6 +1917,7 @@ static void __init tegra_cardhu_init(void)
 	cardhu_dtv_init();
 	cardhu_suspend_init();
 	cardhu_touch_init();
+	cardhu_audio_init();
 	if (project_info == TEGRA3_PROJECT_TF300TG)
 		cardhu_modem_init();
 	cardhu_keys_init();
