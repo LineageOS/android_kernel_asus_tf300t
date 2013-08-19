@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "baee8101_b6aa3084",
+        "filename": "arch/arm/mach-tegra/pm.c",
+        "patchSetId": 1
+      },
+      "lineNbr": 1087,
+      "author": {
+        "id": 6886
+      },
+      "writtenOn": "2013-08-19T00:50:22Z",
+      "side": 1,
+      "message": "remove the inline fixes kernel compilation",
+      "revId": "29fe48d1549ba35f60acfbd5562568d0a6d9f979",
+      "serverId": "1ec6b3db-b2c1-4fa4-84a2-4c7efe89ba71",
+      "unresolved": false
+    }
+  ]
+}
