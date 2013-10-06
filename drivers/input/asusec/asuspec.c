@@ -60,8 +60,6 @@ static ssize_t asuspec_charging_led_store(struct device *class,
 		struct device_attribute *attr,const char *buf, size_t count);
 static ssize_t asuspec_led_show(struct device *class,
 		struct device_attribute *attr,char *buf);
-static ssize_t asuspec_enter_factory_mode_show(struct device *class,
-		struct device_attribute *attr,char *buf);
 static ssize_t asuspec_enter_normal_mode_show(struct device *class,
 		struct device_attribute *attr,char *buf);
 static ssize_t asuspec_switch_hdmi_show(struct device *class,
@@ -85,7 +83,6 @@ static void asuspec_switch_apower_state(int state);
 static void asuspec_switch_hdmi(void);
 static void asuspec_win_shutdown(void);
 static void asuspec_storage_info_update(void);
-static void asuspec_enter_factory_mode(void);
 static void asuspec_enter_normal_mode(void);
 static ssize_t ec_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos);
 static ssize_t ec_read(struct file *file, char __user *buf, size_t count, loff_t *ppos);
@@ -160,12 +157,9 @@ static DEVICE_ATTR(ec_control_flag, S_IWUSR | S_IRUGO, asuspec_control_flag_show
 static DEVICE_ATTR(ec_request, S_IWUSR | S_IRUGO, asuspec_send_ec_req_show,NULL);
 static DEVICE_ATTR(ec_led, S_IWUSR | S_IRUGO, asuspec_led_show,NULL);
 static DEVICE_ATTR(ec_charging_led, S_IWUSR | S_IRUGO, NULL, asuspec_charging_led_store);
-static DEVICE_ATTR(ec_factory_mode, S_IWUSR | S_IRUGO, asuspec_enter_factory_mode_show,NULL);
 static DEVICE_ATTR(ec_normal_mode, S_IWUSR | S_IRUGO, asuspec_enter_normal_mode_show,NULL);
 static DEVICE_ATTR(ec_switch_hdmi, S_IWUSR | S_IRUGO, asuspec_switch_hdmi_show,NULL);
 static DEVICE_ATTR(ec_win_shutdown, S_IWUSR | S_IRUGO, asuspec_win_shutdown_show,NULL);
-static DEVICE_ATTR(ec_cmd_data_send, S_IWUSR | S_IRUGO, NULL, asuspec_cmd_data_store);
-static DEVICE_ATTR(ec_data_read, S_IWUSR | S_IRUGO,  asuspec_return_data_show, NULL);
 
 static struct attribute *asuspec_smbus_attributes[] = {
 	&dev_attr_ec_status.attr,
@@ -176,12 +170,9 @@ static struct attribute *asuspec_smbus_attributes[] = {
 	&dev_attr_ec_request.attr,
 	&dev_attr_ec_led.attr,
 	&dev_attr_ec_charging_led.attr,
-	&dev_attr_ec_factory_mode.attr,
 	&dev_attr_ec_normal_mode.attr,
 	&dev_attr_ec_switch_hdmi.attr,
 	&dev_attr_ec_win_shutdown.attr,
-	&dev_attr_ec_cmd_data_send.attr,
-	&dev_attr_ec_data_read.attr,
 NULL
 };
 
@@ -243,15 +234,9 @@ int asuspec_battery_monitor(char *cmd){
 		return -1;
 	}
 	else {
-#if FACTORY_MODE
-                if((factory_mode != 2) && (ec_chip->audio_recording == 0)){
-                        mod_timer(&ec_chip->asuspec_timer,jiffies+(HZ * 1));
-                }
-#else
                 if(ec_chip->audio_recording == 0){
                         mod_timer(&ec_chip->asuspec_timer,jiffies+(HZ * 1));
                 }
-#endif
 		if (!strcmp(cmd, "status"))
 			ret_val = (ec_chip->i2c_dm_battery[2] << 8 ) | ec_chip->i2c_dm_battery[1];
 		else if (!strcmp(cmd, "temperature"))
@@ -536,14 +521,7 @@ static int asuspec_chip_init(struct i2c_client *client)
 	strcpy(ec_chip->ec_pcba, &ec_chip->i2c_dm_data[1]);
 	ASUSPEC_NOTICE("PCBA Version: %s\n", ec_chip->ec_pcba);
 
-#if FACTORY_MODE
-	if(factory_mode == 2)
-		asuspec_enter_factory_mode();
-	else
-		asuspec_enter_normal_mode();
-#else
-		asuspec_enter_normal_mode();
-#endif
+	asuspec_enter_normal_mode();
 
 	ec_chip->status = 1;
 	switch_set_state(&ec_chip->pad_sdev, !ec_chip->pad_sdev.state);
@@ -987,12 +965,6 @@ static ssize_t asuspec_led_show(struct device *class,struct device_attribute *at
 		return sprintf(buf, "EC LED Blink\n");
 }
 
-static ssize_t asuspec_enter_factory_mode_show(struct device *class,struct device_attribute *attr,char *buf)
-{
-	asuspec_enter_factory_mode();
-	return sprintf(buf, "Entering factory mode\n");
-}
-
 static ssize_t asuspec_enter_normal_mode_show(struct device *class,struct device_attribute *attr,char *buf)
 {
 	asuspec_enter_normal_mode();
@@ -1365,18 +1337,6 @@ static void asuspec_storage_info_update(void){
 			break;
 		}
 	}
-}
-
-static void asuspec_enter_factory_mode(void){
-
-	ASUSPEC_NOTICE("Entering factory mode\n");
-	asuspec_dockram_read_data(0x0A);
-	ec_chip->i2c_dm_data[0] = 8;
-	ec_chip->i2c_dm_data[5] = ec_chip->i2c_dm_data[5] | 0x40;
-#if CSC_IMAGE
-        ec_chip->i2c_dm_data[5] = ec_chip->i2c_dm_data[5] & 0xBF;
-#endif
-	asuspec_dockram_write_data(0x0A,9);
 }
 
 static void asuspec_enter_normal_mode(void){

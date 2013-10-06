@@ -87,7 +87,6 @@ static int asusdec_resume(struct i2c_client *client);
 static int asusdec_open(struct inode *inode, struct file *flip);
 static int asusdec_release(struct inode *inode, struct file *flip);
 static long asusdec_ioctl(struct file *flip, unsigned int cmd, unsigned long arg);
-static void asusdec_enter_factory_mode(void);
 static ssize_t ec_write(struct file *file, const char __user *buf, size_t count, loff_t *ppos);
 static ssize_t ec_read(struct file *file, char __user *buf, size_t count, loff_t *ppos);
 static void BuffPush(char data);
@@ -639,11 +638,6 @@ static int asusdec_chip_init(struct i2c_client *client)
 		"susb on when receive ec_req" : "susb on when system wakeup");
 
 	ec_chip->tf_dock = 1;
-
-#if FACTORY_MODE
-	if(factory_mode == 2)
-		asusdec_enter_factory_mode();
-#endif
 
 	if(asusdec_input_device_create(client)){
 		goto fail_to_access_ec;
@@ -2386,18 +2380,6 @@ static long asusdec_ioctl(struct file *flip,
             return -ENOTTY;
 	}
     return 0;
-}
-
-static void asusdec_enter_factory_mode(void){
-
-	ASUSDEC_NOTICE("Entering factory mode\n");
-	asusdec_dockram_read_data(0x0A);
-	ec_chip->i2c_dm_data[0] = 8;
-	ec_chip->i2c_dm_data[5] = ec_chip->i2c_dm_data[5] | 0x40;
-#if CSC_IMAGE
-        ec_chip->i2c_dm_data[5] = ec_chip->i2c_dm_data[5] & 0xBF;
-#endif
-	asusdec_dockram_write_data(0x0A,9);
 }
 
 static int BuffDataSize(void)
